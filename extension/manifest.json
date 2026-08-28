@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "AI Image Check",
+  "version": "0.1.0",
+  "description": "Capture the current page and prepare it for AI-generated image detection.",
+  "permissions": ["activeTab", "tabs", "storage"],
+  "host_permissions": ["<all_urls>", "http://localhost:8000/*"],
+  "action": {
+    "default_title": "Check image with AI Image Check",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "css": ["content.css"]
+  }],
+  "commands": {
+    "capture-and-check": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "MacCtrl+Shift+Y"
+      },
+      "description": "Capture the current tab and check for AI-generated imagery"
+    }
+  },
+  "icons": {}
+}

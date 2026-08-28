@@ -1,0 +1,6 @@
+{
+  "status": "queued",
+  "samples": 77,
+  "corrections": 38,
+  "message": "Training job placeholder created. Add a fine-tuning pipeline next."
+}

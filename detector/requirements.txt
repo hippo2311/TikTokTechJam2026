@@ -1,0 +1,9 @@
+torch
+torchvision
+transformers
+pillow
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+psycopg[binary]

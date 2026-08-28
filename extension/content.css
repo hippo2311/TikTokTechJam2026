@@ -1,0 +1,15 @@
+#ai-image-check-bubble { all:initial; position:fixed; z-index:2147483647; right:24px; bottom:24px; width:54px; height:54px; border:1px solid rgba(255,255,255,.25); border-radius:50%; background:linear-gradient(145deg,#8e7cff,#4f3db5); color:white; cursor:pointer; display:grid; place-items:center; font:25px -apple-system,sans-serif; box-shadow:0 8px 30px rgba(58,35,160,.45); transition:transform .2s,filter .2s; }
+#ai-image-check-bubble:hover { transform:scale(1.08); filter:brightness(1.15); }
+#ai-image-check-bubble.is-loading { animation:ai-check-pulse 1s infinite; }
+#ai-image-check-panel { all:initial; position:fixed; z-index:2147483647; right:24px; bottom:90px; width:245px; padding:14px 16px; border:1px solid #3d365e; border-radius:14px; background:#17151f; color:#f8f7ff; box-shadow:0 12px 40px rgba(0,0,0,.28); font:13px -apple-system,sans-serif; opacity:0; transform:translateY(8px); pointer-events:none; transition:.2s; }
+#ai-image-check-panel.is-visible { opacity:1; transform:none; pointer-events:auto; }
+#ai-image-check-panel strong,#ai-image-check-panel span { display:block; } #ai-image-check-panel strong { margin-bottom:5px; } #ai-image-check-panel span { color:#b2afc0; line-height:1.4; }
+@keyframes ai-check-pulse { 50% { transform:scale(.9); opacity:.7; } }
+#ai-image-check-shade { all:initial; position:fixed; inset:0; z-index:2147483646; cursor:crosshair; background:rgba(15,12,30,.18); display:none; }
+#ai-image-check-shade.is-active { display:block; }
+#ai-image-check-selection { all:initial; position:fixed; z-index:2147483647; border:2px solid #9c8dff; background:rgba(142,124,255,.18); display:none; pointer-events:none; }
+#ai-image-check-selection.is-active { display:block; }
+.ai-feedback,.ai-labels { display:none; gap:6px; margin-top:10px; }
+.ai-feedback button,.ai-labels button { border:1px solid #4b4567; border-radius:7px; padding:6px 8px; color:#e8e5ff; background:#28233d; cursor:pointer; font:11px -apple-system,sans-serif; }
+.ai-feedback button:hover,.ai-labels button:hover { background:#4f4387; }
+.ai-labels.is-visible { display:flex; }
