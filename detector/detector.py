@@ -147,7 +147,18 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     fn = sum(row.get("prediction") == "not-ai" and row.get("label") == "ai-generated" for row in reviewed)
     tn = sum(row.get("prediction") == "not-ai" and row.get("label") == "not-ai" for row in reviewed)
     wrong_cases = [{key: value for key, value in row.items() if key != "image"} for row in wrong[-30:][::-1]]
-    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}}
+    history = []
+    for row in reviewed:
+        day = str(row.get("createdAt", ""))[:10] or "unknown"
+        item = next((entry for entry in history if entry["date"] == day), None)
+        if item is None:
+            item = {"date": day, "total": 0, "correct": 0}
+            history.append(item)
+        item["total"] += 1
+        item["correct"] += row.get("feedback") == "correct"
+    for item in history:
+        item["accuracy"] = round(item["correct"] / item["total"] * 100, 1)
+    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}, "history": history}
 
 
 @app.post("/seed-demo")
