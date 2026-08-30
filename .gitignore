@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local data and generated reports
+data/*.db
+predictions.json
+
+# Reelistic trained artifacts and Hugging Face cache
+reelistic/cluster_results/
+reelistic/**/.cache/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# OS and IDE files
+.DS_Store
+.idea/
+.vscode/

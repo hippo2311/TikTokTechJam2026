@@ -12,7 +12,7 @@
   let lastVerdict="uncertain";
   let autoConfirmTimer;
   let feedbackRecorded=false;
-  const AUTO_CONFIRM_DELAY=5000;
+  const AUTO_CONFIRM_DELAY=10000;
   function showThanks(){panel.querySelector("span").textContent="Thanks — feedback recorded";panel.querySelector(".ai-feedback").style.display="none";panel.querySelector(".ai-labels").classList.remove("is-visible");}
   async function recordFeedback(type,label){if(feedbackRecorded)return;feedbackRecorded=true;try{await chrome.runtime.sendMessage({type:"AI_IMAGE_CHECK_FEEDBACK",feedback:type,label});}catch(_){} }
   chrome.runtime.onMessage.addListener(m=>{if(m?.type!=="SHOW_RESULT")return;bubble.classList.remove("is-loading");const r=m.result||{};lastVerdict=r.verdict||"uncertain";feedbackRecorded=false;clearTimeout(autoConfirmTimer);panel.querySelector("span").textContent=r.verdict==="ai-generated"?`Likely AI-generated (${r.confidence}%)`:r.verdict==="not-ai"?`Likely human-made (${r.confidence}%)`:(r.note||"Unable to determine");panel.querySelector(".ai-feedback").style.display="flex";panel.classList.add("is-visible");autoConfirmTimer=setTimeout(async()=>{await recordFeedback("correct",lastVerdict);showThanks();},AUTO_CONFIRM_DELAY);});

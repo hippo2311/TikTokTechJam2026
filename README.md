@@ -51,9 +51,26 @@ TechJam/
 
 `verdict` must be `ai-generated` or `not-ai`. `confidence` is a percentage from 0 to 100.
 
-## Add your trained model
+## Reelistic model
 
-Keep the `/detect` API unchanged and replace only the model adapter in `detector/detector.py`.
+The backend uses the Reelistic seed-43 ensemble from the companion repository:
+
+```text
+reelistic/cluster_results/seed43/best_ensemble_calibrated.pt
+```
+
+The checkpoint is downloaded from Hugging Face and is intentionally excluded
+from Git because it is approximately 1.2 GB. From the project root:
+
+```bash
+git clone https://github.com/Bryanngu03/TiktokTechjam26Reelistic.git reelistic
+pip install -r reelistic/requirements.txt
+mkdir -p reelistic/cluster_results/seed43
+python3 -c "from huggingface_hub import hf_hub_download; hf_hub_download('bryan3112/reelistic-seed43', 'best_ensemble_calibrated.pt', local_dir='reelistic/cluster_results/seed43')"
+```
+
+Keep the `/detect` API unchanged so the browser extension does not depend on
+the model implementation.
 
 For a Hugging Face-compatible model:
 
