@@ -1,4 +1,5 @@
 const CAPTURE_MESSAGE = "AI_IMAGE_CHECK_CAPTURE";
+const API = "http://34.124.152.42:8000";
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "capture-and-check") return;
@@ -8,7 +9,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "AI_IMAGE_CHECK_FEEDBACK") {
     chrome.storage.local.get(["lastCapture", "lastResult"]).then(async ({ lastCapture, lastResult }) => {
-      const response = await fetch("http://localhost:8000/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: message.feedback, label: message.label, prediction: lastResult?.verdict, image: lastCapture, page: sender.tab?.url, createdAt: new Date().toISOString() }) });
+      const response = await fetch(`${API}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: message.feedback, label: message.label, prediction: lastResult?.verdict, image: lastCapture, page: sender.tab?.url, createdAt: new Date().toISOString() }) });
       if (response.ok) await chrome.storage.local.set({ pendingFeedback: false });
       sendResponse({ ok: response.ok });
     }).catch(error => sendResponse({ ok: false, error: error.message }));
@@ -35,7 +36,7 @@ async function captureAndOpenResult(requestingTabId, rect) {
 
   let result;
   try {
-    const detectorResponse = await fetch("http://localhost:8000/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: dataUrl }) });
+    const detectorResponse = await fetch(`${API}/detect`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: dataUrl }) });
     if (!detectorResponse.ok) throw new Error(await detectorResponse.text());
     result = await detectorResponse.json();
   } catch (error) {
@@ -48,7 +49,7 @@ async function captureAndOpenResult(requestingTabId, rect) {
 async function autoConfirmPendingFeedback(page) {
   const { pendingFeedback, lastCapture, lastResult } = await chrome.storage.local.get(["pendingFeedback", "lastCapture", "lastResult"]);
   if (!pendingFeedback || !lastResult) return;
-  const response = await fetch("http://localhost:8000/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: "correct", label: lastResult.verdict, prediction: lastResult.verdict, image: lastCapture, page, createdAt: new Date().toISOString() }) });
+  const response = await fetch(`${API}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: "correct", label: lastResult.verdict, prediction: lastResult.verdict, image: lastCapture, page, createdAt: new Date().toISOString() }) });
   if (response.ok) await chrome.storage.local.set({ pendingFeedback: false });
 }
 

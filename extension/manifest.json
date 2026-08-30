@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Capture the current page and prepare it for AI-generated image detection.",
   "permissions": ["activeTab", "tabs", "storage"],
-  "host_permissions": ["<all_urls>", "http://localhost:8000/*"],
+  "host_permissions": ["<all_urls>", "http://34.124.152.42:8000/*"],
   "action": {
     "default_title": "Check image with AI Image Check",
     "default_popup": "popup.html"
