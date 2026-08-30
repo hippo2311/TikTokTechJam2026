@@ -4,6 +4,7 @@ async function refresh() {
   try {
     const data = await (await fetch(`${API}/stats`)).json();
     $("accuracy").textContent = `${data.accuracy}%`;
+    $("signalValue").textContent = `${data.accuracy}%`;
     $("total").textContent = data.total;
     $("correct").textContent = data.correct;
     $("wrong").textContent = data.wrong;
