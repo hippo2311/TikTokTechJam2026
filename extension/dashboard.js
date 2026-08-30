@@ -17,7 +17,7 @@ async function refresh() {
     allWrong = data.recentPredictions || []; page = 1; renderCases();
   } catch (e) { $("updated").textContent = "Backend offline"; }
 }
-function renderCases() { const start=(page-1)*20, rows=allWrong.slice(start,start+20); $("cases").innerHTML=rows.length?rows.map(r=>`<div class="case"><span class="badge">${r.verdict === "ai-generated" ? "AI" : "HUMAN"}</span>Prediction: <b>${r.verdict||"unknown"}</b> · Confidence: <b>${r.confidence ?? "—"}%</b><br><small>${new Date(r.createdAt).toLocaleString()}</small></div>`).join(""):'<div class="empty">No predictions yet.</div>'; $("pager").innerHTML=Array.from({length:Math.ceil(allWrong.length/20)},(_,i)=>`<button class="${i+1===page?"active":""}" data-page="${i+1}">${i+1}</button>`).join(""); }
+function renderCases() { const start=(page-1)*20, rows=allWrong.slice(start,start+20); $("cases").innerHTML=rows.length?rows.map(r=>`<div class="case"><span class="badge">${r.verdict === "ai-generated" ? "AI" : "HUMAN"}</span>Prediction: <b>${r.verdict||"unknown"}</b> · Confidence: <b>${r.confidence ?? "—"}%</b><br><small>${new Date(r.createdAt).toLocaleString()}</small>${r.imageUrl?` · <a href="${API}${r.imageUrl}" target="_blank" rel="noopener" class="view-image">View image ↗</a>`:""}</div>`).join(""):'<div class="empty">No predictions yet.</div>'; $("pager").innerHTML=Array.from({length:Math.ceil(allWrong.length/20)},(_,i)=>`<button class="${i+1===page?"active":""}" data-page="${i+1}">${i+1}</button>`).join(""); }
 document.addEventListener("click",e=>{if(e.target.dataset.page){page=Number(e.target.dataset.page);renderCases();}});
 $("updateDb")?.addEventListener("click",()=>refresh());
 function renderLineChart(rows) {
