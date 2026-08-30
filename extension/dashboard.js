@@ -22,7 +22,8 @@ document.addEventListener("click",e=>{if(e.target.dataset.page){page=Number(e.ta
 $("updateDb")?.addEventListener("click",()=>refresh());
 function renderLineChart(rows) {
   const el = $("lineChart"); if (!rows.length) { el.innerHTML = '<div class="empty">No reviewed data yet.</div>'; return; }
-  const w = 900, h = 210, pad = 18, points = rows.map((r, i) => `${pad + i * ((w - pad * 2) / Math.max(1, rows.length - 1))},${h - pad - (r.accuracy / 100) * (h - pad * 2)}`).join(" ");
-  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${points}"/>${rows.map((r,i)=>{const x=pad+i*((w-pad*2)/Math.max(1,rows.length-1));const y=h-pad-(r.accuracy/100)*(h-pad*2);return `<circle cx="${x}" cy="${y}" r="5"><title>${r.date}: ${r.accuracy}%</title></circle>`}).join("")}</svg>`;
+  const w = 900, h = 210, pad = 18, max = Math.max(1, ...rows.map(r => Math.max(r.correct, r.wrong))), x = i => pad + i * ((w - pad * 2) / Math.max(1, rows.length - 1)), y = v => h - pad - (v / max) * (h - pad * 2);
+  const line = key => rows.map((r,i) => `${x(i)},${y(r[key] || 0)}`).join(" ");
+  el.innerHTML = `<div class="chart-legend"><span><i class="cyan"></i>Correct</span><span><i class="pink"></i>Wrong</span></div><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline class="correct-line" points="${line("correct")}"/><polyline class="wrong-line" points="${line("wrong")}"/>${rows.map((r,i)=>`<circle class="correct-dot" cx="${x(i)}" cy="${y(r.correct||0)}" r="5"><title>${r.date}: ${r.correct||0} correct</title></circle><circle class="wrong-dot" cx="${x(i)}" cy="${y(r.wrong||0)}" r="5"><title>${r.date}: ${r.wrong||0} wrong</title></circle>`).join("")}</svg>`;
 }
 refresh(); setInterval(refresh, 3000);

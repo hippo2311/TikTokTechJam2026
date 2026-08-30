@@ -167,10 +167,11 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
         day = str(row.get("createdAt", ""))[:10] or "unknown"
         item = next((entry for entry in history if entry["date"] == day), None)
         if item is None:
-            item = {"date": day, "total": 0, "correct": 0}
+            item = {"date": day, "total": 0, "correct": 0, "wrong": 0}
             history.append(item)
         item["total"] += 1
         item["correct"] += row.get("feedback") == "correct"
+        item["wrong"] += row.get("feedback") == "wrong"
     for item in history:
         item["accuracy"] = round(item["correct"] / item["total"] * 100, 1)
     recent_predictions = [{"id": row.id, "verdict": row.verdict, "confidence": row.confidence, "createdAt": row.created_at.isoformat(), "storageUri": row.storage_uri, "imageUrl": f"/prediction-image/{row.id}" if row.storage_uri else None} for row in list_predictions()]
