@@ -147,7 +147,7 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     fp = sum(row.get("prediction") == "ai-generated" and row.get("label") == "not-ai" for row in reviewed)
     fn = sum(row.get("prediction") == "not-ai" and row.get("label") == "ai-generated" for row in reviewed)
     tn = sum(row.get("prediction") == "not-ai" and row.get("label") == "not-ai" for row in reviewed)
-    wrong_cases = [{key: value for key, value in row.items() if key != "image"} for row in wrong[-30:][::-1]]
+    wrong_cases = wrong[-100:][::-1]
     history = []
     for row in reviewed:
         day = str(row.get("createdAt", ""))[:10] or "unknown"
