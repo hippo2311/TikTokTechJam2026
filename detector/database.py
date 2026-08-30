@@ -31,6 +31,17 @@ class Feedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
+class Prediction(Base):
+    __tablename__ = "predictions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    verdict: Mapped[str] = mapped_column(String(50), index=True)
+    confidence: Mapped[float] = mapped_column(Float)
+    fake_probability: Mapped[float] = mapped_column(Float)
+    storage_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+
 def init_database():
     if DATABASE_URL.startswith("sqlite"):
         (PROJECT_ROOT / "data").mkdir(exist_ok=True)
@@ -54,3 +65,9 @@ def save_feedback(data: dict):
 def list_feedback():
     with SessionLocal() as session:
         return list(session.scalars(select(Feedback).order_by(Feedback.id)))
+
+
+def save_prediction(data: dict):
+    with SessionLocal() as session:
+        session.add(Prediction(verdict=data["verdict"], confidence=data["confidence"], fake_probability=data["fake_probability"], storage_uri=data.get("storage_uri")))
+        session.commit()

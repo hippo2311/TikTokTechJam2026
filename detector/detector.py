@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
 import torch
-from .database import init_database, list_feedback, save_feedback
+from .database import init_database, list_feedback, save_feedback, save_prediction
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REELISTIC_ROOT = PROJECT_ROOT / "reelistic"
 sys.path.insert(0, str(REELISTIC_ROOT))
@@ -115,7 +115,8 @@ def detect(request: DetectRequest):
             fake_score = float(classifier.predict_proba(inputs)[0])
         verdict = "ai-generated" if fake_score >= 0.5 else "not-ai"
         confidence = round((fake_score if verdict == "ai-generated" else 1 - fake_score) * 100)
-        archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score}, request.image)
+        storage_uri = archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score}, request.image)
+        save_prediction({"verdict": verdict, "confidence": confidence, "fake_probability": fake_score, "storage_uri": storage_uri})
         return {"verdict": verdict, "confidence": confidence, "note": "Reelistic calibrated FAKE probability"}
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
