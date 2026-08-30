@@ -6,6 +6,12 @@ async function refresh() {
     const data = await (await fetch(`${API}/stats`)).json();
     $("accuracy").textContent = `${data.accuracy}%`;
     $("signalValue").textContent = `${data.accuracy}%`;
+    const insight = $("insightText");
+    if (data.total < 20) insight.textContent = "Collecting more samples for a reliable signal.";
+    else if (data.accuracy < 70) insight.textContent = "Critical: accuracy is below 70%. More reviewed examples are needed.";
+    else if (data.accuracy < 80) insight.textContent = "Warning: accuracy is below 80%. Review recent wrong detections.";
+    else if (data.accuracy < 90) insight.textContent = "Notice: accuracy is below 90%. Continue collecting feedback.";
+    else insight.textContent = "Accuracy is healthy. Keep monitoring new feedback.";
     $("total").textContent = data.total;
     $("correct").textContent = data.correct;
     $("wrong").textContent = data.wrong;
