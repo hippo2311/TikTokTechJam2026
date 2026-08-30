@@ -22,6 +22,7 @@ class Feedback(Base):
     __tablename__ = "feedback"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prediction_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     feedback: Mapped[str] = mapped_column(String(20), index=True)
     label: Mapped[str] = mapped_column(String(50))
     prediction: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -46,6 +47,11 @@ def init_database():
     if DATABASE_URL.startswith("sqlite"):
         (PROJECT_ROOT / "data").mkdir(exist_ok=True)
     Base.metadata.create_all(engine)
+    if DATABASE_URL.startswith("sqlite"):
+        with engine.begin() as conn:
+            cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(feedback)")]
+            if "prediction_id" not in cols:
+                conn.exec_driver_sql("ALTER TABLE feedback ADD COLUMN prediction_id INTEGER")
 
 
 def save_feedback(data: dict):
@@ -54,12 +60,13 @@ def save_feedback(data: dict):
         created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
     with SessionLocal() as session:
         record = Feedback(
-            feedback=data["feedback"], label=data["label"], prediction=data.get("prediction"),
+            prediction_id=data.get("predictionId"), feedback=data["feedback"], label=data["label"], prediction=data.get("prediction"),
             confidence=data.get("confidence"), image=data.get("image"), page=data.get("page"),
             created_at=created_at or datetime.now(timezone.utc),
         )
         session.add(record)
         session.commit()
+        return record.id
 
 
 def list_feedback():
@@ -71,8 +78,19 @@ def save_prediction(data: dict):
     with SessionLocal() as session:
         session.add(Prediction(verdict=data["verdict"], confidence=data["confidence"], fake_probability=data["fake_probability"], storage_uri=data.get("storage_uri")))
         session.commit()
+        return session.scalars(select(Prediction).order_by(Prediction.id.desc())).first().id
 
 
 def list_predictions(limit: int = 100):
     with SessionLocal() as session:
         return list(session.scalars(select(Prediction).order_by(Prediction.id.desc()).limit(limit)))
+
+
+def update_prediction_review(prediction_id: int, feedback: str, label: str):
+    with SessionLocal() as session:
+        record = session.scalars(select(Feedback).where(Feedback.prediction_id == prediction_id)).first()
+        if record:
+            record.feedback, record.label = feedback, label
+        else:
+            session.add(Feedback(prediction_id=prediction_id, feedback=feedback, label=label, prediction=session.get(Prediction, prediction_id).verdict))
+        session.commit()

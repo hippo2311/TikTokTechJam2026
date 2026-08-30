@@ -9,7 +9,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "AI_IMAGE_CHECK_FEEDBACK") {
     chrome.storage.local.get(["lastCapture", "lastResult"]).then(async ({ lastCapture, lastResult }) => {
-      const response = await fetch(`${API}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: message.feedback, label: message.label, prediction: lastResult?.verdict, image: lastCapture, page: sender.tab?.url, createdAt: new Date().toISOString() }) });
+      const response = await fetch(`${API}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: message.feedback, label: message.label, prediction: lastResult?.verdict, predictionId: lastResult?.id, image: lastCapture, page: sender.tab?.url, createdAt: new Date().toISOString() }) });
       if (response.ok) await chrome.storage.local.set({ pendingFeedback: false });
       sendResponse({ ok: response.ok });
     }).catch(error => sendResponse({ ok: false, error: error.message }));
