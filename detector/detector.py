@@ -156,9 +156,8 @@ def review_prediction(prediction_id: int, request: ReviewRequest, credentials: H
     prediction = next((item for item in list_predictions(1000) if item.id == prediction_id), None)
     if not prediction or request.status not in {"correct", "wrong", "unreviewed"}:
         raise HTTPException(status_code=400, detail="Invalid prediction or status")
-    if request.status != "unreviewed":
-        label = prediction.verdict if request.status == "correct" else ("not-ai" if prediction.verdict == "ai-generated" else "ai-generated")
-        update_prediction_review(prediction_id, request.status, label)
+    label = prediction.verdict if request.status == "correct" else ("not-ai" if prediction.verdict == "ai-generated" else "ai-generated")
+    update_prediction_review(prediction_id, request.status, label)
     return {"ok": True}
 
 
@@ -171,7 +170,7 @@ def read_feedback():
 @app.get("/stats")
 def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     require_admin(credentials)
-    rows = read_feedback(); reviewed = [row for row in rows if row.get("feedback") in {"correct", "wrong"}]
+    rows = read_feedback(); reviewed = [row for row in rows if row.get("feedback") in {"correct", "wrong"} and row.get("prediction") in {"ai-generated", "not-ai"} and row.get("label") in {"ai-generated", "not-ai"}]
     correct = sum(row.get("feedback") == "correct" for row in reviewed)
     wrong = [row for row in reviewed if row.get("feedback") == "wrong"]
     def effective_prediction(row):
