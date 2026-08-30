@@ -6,6 +6,9 @@ async function refresh() {
     const data = await (await fetch(`${API}/stats`)).json();
     $("accuracy").textContent = `${data.accuracy}%`;
     $("signalValue").textContent = `${data.accuracy}%`;
+    const warning = $("warning");
+    warning.textContent = data.total < 20 ? "Collecting more reviews" : data.accuracy < 70 ? "Critical accuracy — review needed" : data.accuracy < 85 ? "Accuracy below target" : "Accuracy looks healthy";
+    warning.className = `warning ${data.total >= 20 && data.accuracy < 70 ? "critical" : data.total >= 20 && data.accuracy < 85 ? "caution" : "good"}`;
     $("total").textContent = data.total;
     $("correct").textContent = data.correct;
     $("wrong").textContent = data.wrong;
