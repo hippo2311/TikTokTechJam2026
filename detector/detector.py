@@ -93,6 +93,8 @@ class DetectRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     feedback: str
     label: str
+    prediction: str | None = None
+    confidence: float | None = None
     image: str | None = None
     page: str | None = None
     createdAt: str | None = None
@@ -140,8 +142,12 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     rows = read_feedback(); reviewed = [row for row in rows if row.get("feedback") in {"correct", "wrong"}]
     correct = sum(row.get("feedback") == "correct" for row in reviewed)
     wrong = [row for row in reviewed if row.get("feedback") == "wrong"]
+    tp = sum(row.get("prediction") == "ai-generated" and row.get("label") == "ai-generated" for row in reviewed)
+    fp = sum(row.get("prediction") == "ai-generated" and row.get("label") == "not-ai" for row in reviewed)
+    fn = sum(row.get("prediction") == "not-ai" and row.get("label") == "ai-generated" for row in reviewed)
+    tn = sum(row.get("prediction") == "not-ai" and row.get("label") == "not-ai" for row in reviewed)
     wrong_cases = [{key: value for key, value in row.items() if key != "image"} for row in wrong[-30:][::-1]]
-    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases}
+    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}}
 
 
 @app.post("/seed-demo")

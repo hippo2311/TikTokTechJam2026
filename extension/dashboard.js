@@ -1,6 +1,18 @@
-const API="http://34.124.152.42:8000"; const $=id=>document.getElementById(id);
-async function refresh(){try{const data=await (await fetch(`${API}/stats`)).json();$("accuracy").textContent=`${data.accuracy}%`;$("total").textContent=data.total;$("correct").textContent=data.correct;$("wrong").textContent=data.wrong;$("updated").textContent=`Updated ${new Date().toLocaleTimeString()}`;renderChart(data);renderCases(data.wrongCases)}catch(e){$("updated").textContent="Backend offline"}}
-function renderChart(data){const values=data.total?[data.accuracy,data.accuracy,data.accuracy]:[];$("chart").innerHTML=values.length?values.map(v=>`<div class="bar" style="height:${Math.max(4,v)}%" data-value="${v}"></div>`).join(""):'<div class="empty">No feedback yet. Load the demo dump to test.</div>'}
-function renderCases(rows){$("cases").innerHTML=rows.length?rows.map(r=>`<div class="case"><span class="badge">WRONG</span>Predicted: <b>${r.prediction||"unknown"}</b> → Correct: <b>${r.label}</b><br><small>${r.page||"local capture"}</small></div>`).join(""):'<div class="empty">No wrong detections yet.</div>'}
-function toast(text){$("toast").textContent=text;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),2500)}
-$("demo").onclick=async()=>{await fetch(`${API}/seed-demo`,{method:"POST"});toast("24 demo feedback records added");refresh()};$("retrain").onclick=async()=>{const r=await (await fetch(`${API}/retrain`,{method:"POST"})).json();toast(`${r.samples} samples queued for retraining`)};refresh();setInterval(refresh,3000);
+const API = "http://34.124.152.42:8000";
+const $ = id => document.getElementById(id);
+async function refresh() {
+  try {
+    const data = await (await fetch(`${API}/stats`)).json();
+    $("accuracy").textContent = `${data.accuracy}%`;
+    $("total").textContent = data.total;
+    $("correct").textContent = data.correct;
+    $("wrong").textContent = data.wrong;
+    $("updated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    const m = data.confusionMatrix || {};
+    $("tp").textContent = m.tp || 0; $("fp").textContent = m.fp || 0;
+    $("fn").textContent = m.fn || 0; $("tn").textContent = m.tn || 0;
+    renderCases(data.wrongCases || []);
+  } catch (e) { $("updated").textContent = "Backend offline"; }
+}
+function renderCases(rows) { $("cases").innerHTML = rows.length ? rows.map(r => `<div class="case"><span class="badge">WRONG</span>Predicted: <b>${r.prediction || "unknown"}</b> → Correct: <b>${r.label}</b><br><small>${r.page || "local capture"}</small></div>`).join("") : '<div class="empty">No wrong detections yet.</div>'; }
+refresh(); setInterval(refresh, 3000);
