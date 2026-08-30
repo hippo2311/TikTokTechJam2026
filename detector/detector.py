@@ -1,11 +1,16 @@
 import base64
 import io
+import json
 import os
 import sys
+import secrets
+from fastapi.responses import FileResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from google.cloud import storage
 from pathlib import Path
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
@@ -19,6 +24,9 @@ from aigc_detector.models.ensemble import AIGCDetectionEnsemble
 
 CHECKPOINT_PATH = Path(os.getenv("REELISTIC_CHECKPOINT", str(REELISTIC_ROOT / "cluster_results/seed43/best_ensemble_calibrated.pt")))
 MODEL_DEVICE = os.getenv("MODEL_DEVICE", "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
+GCS_BUCKET = os.getenv("GCS_BUCKET", "")
+GCS_CLIENT = storage.Client() if GCS_BUCKET else None
+basic_auth = HTTPBasic()
 app = FastAPI(title="AI Image Check Local Detector")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 device = torch.device(MODEL_DEVICE)
@@ -40,6 +48,42 @@ classifier.load_state_dict(checkpoint["model_state"])
 classifier.eval()
 processor = build_eval_transform(image_size=checkpoint_args.get("image_size", 128))
 init_database()
+
+
+def require_admin(credentials: HTTPBasicCredentials):
+    username_ok = secrets.compare_digest(credentials.username, os.getenv("DASHBOARD_USER", "admin"))
+    password_ok = secrets.compare_digest(credentials.password, os.getenv("DASHBOARD_PASSWORD", "change-me"))
+    if not (username_ok and password_ok):
+        from fastapi import status
+        from fastapi.responses import Response
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin credentials", headers={"WWW-Authenticate": "Basic"})
+
+
+def archive_event(kind: str, payload: dict, image_data: str | None = None):
+    if not GCS_CLIENT or not GCS_BUCKET:
+        return None
+    bucket = GCS_CLIENT.bucket(GCS_BUCKET)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    prefix = f"events/{stamp}-{kind}"
+    if image_data:
+        raw = image_data.split(",", 1)[1] if "," in image_data else image_data
+        bucket.blob(f"{prefix}.png").upload_from_string(base64.b64decode(raw), content_type="image/png")
+    bucket.blob(f"{prefix}.json").upload_from_string(json.dumps(payload, default=str), content_type="application/json")
+    return f"gs://{GCS_BUCKET}/{prefix}.json"
+
+
+@app.get("/dashboard")
+def dashboard(credentials: HTTPBasicCredentials = Depends(basic_auth)):
+    require_admin(credentials)
+    return FileResponse(PROJECT_ROOT / "extension" / "dashboard.html")
+
+
+@app.get("/dashboard-assets/{asset}")
+def dashboard_asset(asset: str):
+    allowed = {"dashboard.css", "dashboard.js"}
+    if asset not in allowed:
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(PROJECT_ROOT / "extension" / asset)
 
 
 class DetectRequest(BaseModel):
@@ -68,7 +112,9 @@ def detect(request: DetectRequest):
         with torch.inference_mode():
             fake_score = float(classifier.predict_proba(inputs)[0])
         verdict = "ai-generated" if fake_score >= 0.5 else "not-ai"
-        return {"verdict": verdict, "confidence": round((fake_score if verdict == "ai-generated" else 1 - fake_score) * 100), "note": "Reelistic calibrated FAKE probability"}
+        confidence = round((fake_score if verdict == "ai-generated" else 1 - fake_score) * 100)
+        archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score}, request.image)
+        return {"verdict": verdict, "confidence": confidence, "note": "Reelistic calibrated FAKE probability"}
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -78,6 +124,7 @@ def feedback(request: FeedbackRequest):
     record = request.model_dump()
     record["createdAt"] = record.get("createdAt") or datetime.now(timezone.utc).isoformat()
     save_feedback(record)
+    archive_event("feedback", record, request.image)
     return {"ok": True}
 
 
@@ -88,7 +135,8 @@ def read_feedback():
 
 
 @app.get("/stats")
-def stats():
+def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
+    require_admin(credentials)
     rows = read_feedback(); reviewed = [row for row in rows if row.get("feedback") in {"correct", "wrong"}]
     correct = sum(row.get("feedback") == "correct" for row in reviewed)
     wrong = [row for row in reviewed if row.get("feedback") == "wrong"]

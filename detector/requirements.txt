@@ -7,3 +7,4 @@ uvicorn
 pydantic
 sqlalchemy
 psycopg[binary]
+google-cloud-storage
