@@ -157,10 +157,13 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     rows = read_feedback(); reviewed = [row for row in rows if row.get("feedback") in {"correct", "wrong"}]
     correct = sum(row.get("feedback") == "correct" for row in reviewed)
     wrong = [row for row in reviewed if row.get("feedback") == "wrong"]
-    tp = sum(row.get("prediction") == "ai-generated" and row.get("label") == "ai-generated" for row in reviewed)
-    fp = sum(row.get("prediction") == "ai-generated" and row.get("label") == "not-ai" for row in reviewed)
-    fn = sum(row.get("prediction") == "not-ai" and row.get("label") == "ai-generated" for row in reviewed)
-    tn = sum(row.get("prediction") == "not-ai" and row.get("label") == "not-ai" for row in reviewed)
+    def effective_prediction(row):
+        if row.get("prediction") in {"ai-generated", "not-ai"}: return row["prediction"]
+        return row.get("label") if row.get("feedback") == "correct" else ("not-ai" if row.get("label") == "ai-generated" else "ai-generated")
+    tp = sum(effective_prediction(row) == "ai-generated" and row.get("label") == "ai-generated" for row in reviewed)
+    fp = sum(effective_prediction(row) == "ai-generated" and row.get("label") == "not-ai" for row in reviewed)
+    fn = sum(effective_prediction(row) == "not-ai" and row.get("label") == "ai-generated" for row in reviewed)
+    tn = sum(effective_prediction(row) == "not-ai" and row.get("label") == "not-ai" for row in reviewed)
     wrong_cases = wrong[-100:][::-1]
     history = []
     for row in reviewed:
