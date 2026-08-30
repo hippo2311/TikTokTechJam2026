@@ -71,3 +71,8 @@ def save_prediction(data: dict):
     with SessionLocal() as session:
         session.add(Prediction(verdict=data["verdict"], confidence=data["confidence"], fake_probability=data["fake_probability"], storage_uri=data.get("storage_uri")))
         session.commit()
+
+
+def list_predictions(limit: int = 100):
+    with SessionLocal() as session:
+        return list(session.scalars(select(Prediction).order_by(Prediction.id.desc()).limit(limit)))

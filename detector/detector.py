@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
 import torch
-from .database import init_database, list_feedback, save_feedback, save_prediction
+from .database import init_database, list_feedback, list_predictions, save_feedback, save_prediction
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REELISTIC_ROOT = PROJECT_ROOT / "reelistic"
 sys.path.insert(0, str(REELISTIC_ROOT))
@@ -159,7 +159,8 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
         item["correct"] += row.get("feedback") == "correct"
     for item in history:
         item["accuracy"] = round(item["correct"] / item["total"] * 100, 1)
-    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}, "history": history}
+    recent_predictions = [{"id": row.id, "verdict": row.verdict, "confidence": row.confidence, "createdAt": row.created_at.isoformat(), "storageUri": row.storage_uri} for row in list_predictions()]
+    return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "recentPredictions": recent_predictions, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}, "history": history}
 
 
 @app.post("/seed-demo")
