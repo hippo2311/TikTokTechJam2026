@@ -174,7 +174,11 @@ def stats(credentials: HTTPBasicCredentials = Depends(basic_auth)):
         item["wrong"] += row.get("feedback") == "wrong"
     for item in history:
         item["accuracy"] = round(item["correct"] / item["total"] * 100, 1)
-    recent_predictions = [{"id": row.id, "verdict": row.verdict, "confidence": row.confidence, "createdAt": row.created_at.isoformat(), "storageUri": row.storage_uri, "imageUrl": f"/prediction-image/{row.id}" if row.storage_uri else None} for row in list_predictions()]
+    recent_predictions = []
+    for row in list_predictions():
+        matches = [item for item in rows if item.get("prediction") == row.verdict]
+        review = matches[-1] if matches else None
+        recent_predictions.append({"id": row.id, "verdict": row.verdict, "confidence": row.confidence, "createdAt": row.created_at.isoformat(), "storageUri": row.storage_uri, "imageUrl": f"/prediction-image/{row.id}" if row.storage_uri else None, "actual": review.get("label") if review else None, "status": ("correct" if review.get("feedback") == "correct" else "wrong") if review else "unreviewed"})
     return {"total": len(reviewed), "correct": correct, "wrong": len(wrong), "accuracy": round(correct / len(reviewed) * 100, 1) if reviewed else 0, "wrongCases": wrong_cases, "recentPredictions": recent_predictions, "confusionMatrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}, "history": history}
 
 
