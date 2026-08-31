@@ -44,7 +44,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     torch.onnx.export(
         LogitOnly(model),
-        torch.randn(1, 3, config["data"].get("image_size", 224)),
+        torch.randn(1, 3, config["data"].get("image_size", 224), config["data"].get("image_size", 224)),
         str(output),
         input_names=["image"],
         output_names=["logit"],
