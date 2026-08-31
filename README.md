@@ -376,13 +376,13 @@ export DATASET_TWO="judge_data/dataset_two"
 python scripts/evaluate_onnx.py \
   --model "$ONNX_MODEL" \
   --input "$DATASET_ONE" \
-  --threshold 0.5 --batch-size 16 \
+  --threshold 0.9648 --batch-size 16 \
   --output-dir judge_results/dataset_one_clean
 
 python scripts/evaluate_onnx.py \
   --model "$ONNX_MODEL" \
   --input "$DATASET_TWO" \
-  --threshold 0.5 --batch-size 16 \
+  --threshold 0.9648 --batch-size 16 \
   --output-dir judge_results/dataset_two_clean
 ```
 
@@ -403,7 +403,7 @@ images/generated/example.png,1
 python scripts/evaluate_onnx.py \
   --model models/reelistic_dino/checkpoints/reelistic_dinov3.onnx \
   --manifest path/to/dataset.csv \
-  --threshold 0.5 \
+  --threshold 0.9648 \
   --batch-size 16 \
   --output-dir judge_results
 ```

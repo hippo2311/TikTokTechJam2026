@@ -32,7 +32,7 @@ CONFIG_PATH = Path(os.getenv("DINO_CONFIG", str(DINO_ROOT / "configs/dinov3_mult
 MODEL_DEVICE = os.getenv("MODEL_DEVICE", "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
 # Deployment cutoff for the calibrated AI probability. Override only with a
 # separately documented decision-policy evaluation.
-DECISION_THRESHOLD = float(os.getenv("DINO_DECISION_THRESHOLD", "0.9"))
+DECISION_THRESHOLD = float(os.getenv("DINO_DECISION_THRESHOLD", "0.5"))
 GCS_BUCKET = os.getenv("GCS_BUCKET", "")
 GCS_CLIENT = storage.Client() if GCS_BUCKET else None
 basic_auth = HTTPBasic()

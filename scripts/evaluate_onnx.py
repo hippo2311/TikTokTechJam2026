@@ -48,7 +48,12 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--manifest", help="CSV with image_path/path and optional label columns.")
     parser.add_argument("--model", default="models/reelistic_dino/checkpoints/reelistic_dinov3.onnx")
     parser.add_argument("--output-dir", default="onnx_evaluation")
-    parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.9648,
+        help="AI-score cutoff for evaluation metrics; 0.9648 is the clean COCO/DALL·E 5%%-FPR operating point.",
+    )
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--transform", action="append", dest="transforms", metavar="NAME[:VALUE]",
                         help="Repeat for clean/jpeg/blur/resize/noise/color/crop. No transforms are chained.")
