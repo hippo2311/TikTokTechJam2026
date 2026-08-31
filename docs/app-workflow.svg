@@ -1,5 +1,5 @@
 <svg width="1400" height="970" viewBox="0 0 1400 970" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">Reelistic closed-loop application workflow</title>
+  <title id="title">Reelistic App Workflow</title>
   <desc id="desc">A browser capture enters FastAPI and DINOv3 inference. Predictions, images, and reviews are stored. Admin-approved examples become a curated training set for offline retraining and robustness validation. A versioned deployment returns to the DINOv3 inference box. Final test data never enters the loop.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
