@@ -179,6 +179,31 @@ The organizer demonstration set is evaluation-only and is never added to trainin
 > **Strict test isolation:** the final test set is never used for initial training, feedback-based retraining, augmentation design, checkpoint selection, hyperparameter tuning, calibration, or threshold selection. It is evaluated only after the model and decision policy are frozen. No dashboard feedback record can be assigned to the final test manifest.
 
 ## Results
+### Test results (In Domain) 
+
+#### Set1: CIFake
+
+| condition | count | roc_auc | accuracy | precision | recall | f1 | tpr_at_5_fpr | threshold_at_5_fpr |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| clean | 20000 | 0.9996 | 0.9930 | 0.9893 | 0.9968 | 0.9930 | 0.9997 | 0.0385 |
+| jpeg_q90 | 20000 | 0.9996 | 0.9926 | 0.9899 | 0.9954 | 0.9926 | 0.9995 | 0.0399 |
+| jpeg_q70 | 20000 | 0.9995 | 0.9929 | 0.9894 | 0.9964 | 0.9929 | 0.9996 | 0.0400 |
+| jpeg_q50 | 20000 | 0.9988 | 0.9863 | 0.9858 | 0.9868 | 0.9863 | 0.9974 | 0.0487 |
+| jpeg_q30 | 20000 | 0.9971 | 0.9764 | 0.9843 | 0.9681 | 0.9762 | 0.9907 | 0.0548 |
+| blur_sigma_0_5 | 20000 | 0.9990 | 0.9878 | 0.9944 | 0.9811 | 0.9877 | 0.9978 | 0.0319 |
+| blur_sigma_1_0 | 20000 | 0.9983 | 0.9838 | 0.9824 | 0.9852 | 0.9838 | 0.9959 | 0.0761 |
+| blur_sigma_2_0 | 20000 | 0.9963 | 0.9729 | 0.9727 | 0.9732 | 0.9730 | 0.9858 | 0.1440 |
+| resize_0_5 | 20000 | 0.9982 | 0.9827 | 0.9799 | 0.9856 | 0.9828 | 0.9943 | 0.0830 |
+| resize_0_25 | 20000 | 0.9886 | 0.9468 | 0.9442 | 0.9498 | 0.9470 | 0.9426 | 0.5889 |
+| noise_sigma_0_02 | 20000 | 0.9995 | 0.9923 | 0.9907 | 0.9940 | 0.9924 | 0.9996 | 0.0392 |
+| noise_sigma_0_05 | 20000 | 0.9992 | 0.9899 | 0.9891 | 0.9908 | 0.9900 | 0.9982 | 0.0392 |
+| noise_sigma_0_10 | 20000 | 0.9981 | 0.9821 | 0.9831 | 0.9812 | 0.9821 | 0.9948 | 0.0687 |
+| color_jitter_0_20 | 20000 | 0.9992 | 0.9908 | 0.9871 | 0.9946 | 0.9908 | 0.9990 | 0.0463 |
+| center_crop_0_80 | 20000 | 0.9985 | 0.9849 | 0.9848 | 0.9851 | 0.9850 | 0.9974 | 0.0586 |
+
+
+#### Set2: SID
+
 
 #### Test Results (COCO & DALLE) 
 
