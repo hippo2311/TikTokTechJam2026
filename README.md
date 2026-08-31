@@ -4,6 +4,8 @@ Reelistic is an end-to-end system for detecting AI-generated images after the ki
 
 > **Submission status:** the application, DINOv3 inference path, cloud deployment, human-in-the-loop review flow, and ONNX export are implemented. Final training, validation, test, and robustness results will be inserted into the empty tables in [Results](#results).
 
+**Project guide:** start with the [system and model architecture](#the-model-multi-scale-dinov3-forensics), then read the [experiment journal](JOURNAL.md) for the unsuccessful four-branch approach and the reasoning that led to DINOv3. Preliminary AUC behavior and the current [error analysis](#error-analysis) are documented below; final result tables remain pending.
+
 ## What the app does
 
 The browser extension lets a user drag over an image on a web page. It captures the visible tab, crops the selected region, validates the capture, and sends the image to the backend. The backend returns `ai-generated` or `human-made` with a confidence score.
@@ -137,6 +139,16 @@ The organizer demonstration set is evaluation-only and is never added to trainin
 
 These tables are intentionally empty. They are the single source of truth to fill after the final training, validation, and test artifacts are supplied.
 
+### Preliminary AUC behavior
+
+The following curves are clean redraws of the training-monitor screenshots supplied before the final result export. They are useful diagnostic evidence, but they are **not** the final clean/robustness evaluation and should not be compared as if they came from identical data distributions.
+
+| Internal validation ROC-AUC | Competition ROC-AUC |
+|---|---|
+| ![Internal validation ROC-AUC across epochs](docs/results/internal-validation-roc-auc.svg) | ![Competition ROC-AUC across epochs](docs/results/competition-roc-auc.svg) |
+
+Internal validation rises quickly and finishes at approximately `0.9993`, indicating that the model separates the internal split extremely well. The competition curve peaks near the beginning of training and then declines to a displayed step-9 value of `0.9368`. This widening gap is consistent with overfitting or a source/generator distribution shift. It does not by itself identify the cause, so the next result package must include per-source and per-transformation metrics and identify the exact selected checkpoint. An earlier competition-AUC checkpoint may generalize better than the final epoch, but that choice must be made on permitted validation evidence rather than the locked final test set.
+
 ### Training result
 
 | Checkpoint / epoch | Samples | Loss | Accuracy | Balanced accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | TPR @ 1% FPR | TPR @ 5% FPR | FPR @ 95% TPR | FPR @ 99% TPR |
@@ -224,6 +236,21 @@ These tables are intentionally empty. They are the single source of truth to fil
 |---|---:|---|---:|---:|---:|---:|---:|
 | PyTorch |  |  |  |  |  |  |  |
 | ONNX Runtime | 382 MB |  |  |  |  |  |  |
+
+## Error analysis
+
+The current error review covers all `6,114` rows in the supplied misclassification CSV and the images available locally for visual inspection: `43` COCO false positives and `250` sampled DALL·E false negatives. Because the export contains errors rather than the complete set of true and false predictions, it **cannot** establish overall accuracy, FPR, FNR, precision, or recall.
+
+The score outputs imply an operating threshold near `0.9741`: the smallest false-positive score is `0.97412109`, while the largest false-negative score is `0.97363281`. This is inferred from adjacent output values and must be confirmed from the evaluation configuration.
+
+| Finding | Evidence | Interpretation / next check |
+|---|---|---|
+| Near-threshold DALL·E misses | `4,545 / 6,071` FNs (`74.86%`) score from `0.95` to just below the inferred threshold | Treat calibration/threshold selection separately from representation failures; sweep thresholds only on a complete validation holdout |
+| COCO false positives | All `43` reviewed examples are `200 x 200` thumbnails with scores from `0.9741` to `0.9849` | Resolution, compression, low light, or low-detail scenes may be shortcuts; confirm with controlled resize/JPEG ablations |
+| Low-score DALL·E misses | Examples include posters and fake packaging, illustration, concept art, and anime/halftone styles | Report recall by generator and style; add group-aware hard-positive coverage where permitted |
+| Data-quality risks | `14 / 250` reviewed FN files contain PNG bytes despite `.jpg` names; seven duplicate-hash pairs were found | Decode from file content, normalize formats, and deduplicate before splitting or scoring |
+
+Representative review folders are available for [COCO false positives](aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco) and [DALL·E false negatives](aigc-error-review/false_negatives_dalle). The patterns above are hypotheses, not causal explanations: attribution, preprocessing ablations, and full-holdout score distributions are still required. Final reporting should include representative FP/FN examples, ROC/PR curves, confidence intervals, per-generator/style slices, and transformation robustness at the frozen operating point.
 
 ## Try the application
 
@@ -322,7 +349,7 @@ def predict(path):
 
 ## Reproducibility and experiment history
 
-The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). The earlier branch-ensemble investigations remain available in the [legacy Reelistic journal](reelistic/JOURNAL.md); those results are not presented as results of the current DINOv3 model.
+The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). In particular, it documents why the earlier texture/frequency/noise/semantic four-branch design did not generalize as intended and how that failure motivated the current shared-backbone, multi-scale DINOv3 design. The complete earlier investigation remains available in the [legacy Reelistic journal](reelistic/JOURNAL.md); those measurements are not presented as results of the current DINOv3 model.
 
 ## Limitations and next steps
 

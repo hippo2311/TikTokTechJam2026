@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="430" viewBox="0 0 760 430" role="img" aria-labelledby="title desc">
+  <title id="title">Competition ROC-AUC across epochs</title>
+  <desc id="desc">ROC-AUC peaks early near 0.978 then declines through training to 0.9368 on step 9.</desc>
+  <rect width="760" height="430" fill="#ffffff"/>
+  <text x="58" y="38" font-family="Arial, sans-serif" font-size="22" fill="#24324a">epoch/competition_roc_auc</text>
+  <g stroke="#d7dce3" stroke-width="1">
+    <path d="M70 80H720M70 145H720M70 210H720M70 275H720M70 340H720"/>
+    <path d="M70 80V372M142 80V372M214 80V372M286 80V372M358 80V372M430 80V372M502 80V372M574 80V372M646 80V372M718 80V372"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="13" fill="#667085">
+    <text x="26" y="85">0.98</text><text x="26" y="150">0.97</text><text x="26" y="215">0.96</text><text x="26" y="280">0.95</text><text x="26" y="345">0.94</text>
+    <text x="67" y="390">0</text><text x="139" y="390">1</text><text x="211" y="390">2</text><text x="283" y="390">3</text><text x="355" y="390">4</text><text x="427" y="390">5</text><text x="499" y="390">6</text><text x="571" y="390">7</text><text x="643" y="390">8</text><text x="715" y="390">9</text>
+  </g>
+  <polyline points="70,93 142,103 214,93 286,119 358,152 430,217 502,278 574,301 646,327 718,361" fill="none" stroke="#344968" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="718" cy="361" r="5" fill="#344968"/>
+  <path d="M718 62V372" stroke="#111827" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="477" y="397" width="241" height="27" rx="5" fill="#eef2f7"/>
+  <text x="490" y="416" font-family="Arial, sans-serif" font-size="14" fill="#24324a">Step 9 · value 0.9368 · preliminary</text>
+</svg>

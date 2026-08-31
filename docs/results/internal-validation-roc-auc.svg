@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="430" viewBox="0 0 760 430" role="img" aria-labelledby="title desc">
+  <title id="title">Internal validation ROC-AUC across epochs</title>
+  <desc id="desc">ROC-AUC rises rapidly, plateaus near 0.9995, and ends at 0.9993 on step 9.</desc>
+  <rect width="760" height="430" fill="#ffffff"/>
+  <text x="58" y="38" font-family="Arial, sans-serif" font-size="22" fill="#24324a">epoch/internal_val_roc_auc</text>
+  <g stroke="#d7dce3" stroke-width="1">
+    <path d="M70 80H720M70 170H720M70 260H720M70 350H720"/>
+    <path d="M70 80V350M142 80V350M214 80V350M286 80V350M358 80V350M430 80V350M502 80V350M574 80V350M646 80V350M718 80V350"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="13" fill="#667085">
+    <text x="18" y="85">0.9995</text><text x="18" y="175">0.9990</text><text x="18" y="265">0.9985</text><text x="18" y="355">0.9980</text>
+    <text x="67" y="375">0</text><text x="139" y="375">1</text><text x="211" y="375">2</text><text x="283" y="375">3</text><text x="355" y="375">4</text><text x="427" y="375">5</text><text x="499" y="375">6</text><text x="571" y="375">7</text><text x="643" y="375">8</text><text x="715" y="375">9</text>
+  </g>
+  <polyline points="142,332 214,188 286,130 358,92 430,85 502,91 574,102 646,105 718,109" fill="none" stroke="#344968" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="718" cy="109" r="5" fill="#344968"/>
+  <path d="M718 62V350" stroke="#111827" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="477" y="392" width="241" height="27" rx="5" fill="#eef2f7"/>
+  <text x="490" y="411" font-family="Arial, sans-serif" font-size="14" fill="#24324a">Step 9 · value 0.9993 · preliminary</text>
+</svg>

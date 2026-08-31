@@ -42,12 +42,25 @@ The final README tables will only be filled from artifacts that identify the che
 
 ## 3. Earlier model direction: complementary forensic branches
 
-The first Reelistic line of work combined texture, frequency, residual-noise, and semantic branches with a quality-aware fusion gate. It was useful for understanding several tensions:
+The first Reelistic line of work divided the detector into four specialized branches—texture, frequency, residual noise, and semantics—and combined their probabilities with a quality-aware fusion gate. The idea was interpretable: each branch would own a different forensic signal, and the gate would decide which evidence was trustworthy for each image.
+
+In practice, the division did not produce the robust specialization we expected:
+
+- the semantic CLIP branch contained most of the parameters and could dominate the three much smaller forensic branches;
+- texture, FFT, and residual-noise signals were fragile under resizing, blur, JPEG compression, and other platform transformations;
+- independently trained branch scores were not naturally comparable, so the fusion gate had to learn from differently calibrated inputs;
+- the gate could follow image-quality or dataset-source shortcuts instead of genuine evidence of image generation;
+- optimizing and validating several branch models made checkpoint selection and failure attribution unnecessarily complex;
+- strong performance on one source did not transfer consistently to a held-out generator family.
+
+This was a useful failure rather than a discarded experiment. It exposed several tensions:
 
 - semantic evidence transfers well in some clean settings but can dominate fragile low-level evidence;
 - blur and aggressive downsampling can erase forensic traces;
 - source-aware validation can choose a different checkpoint from aggregate validation;
 - calibration and low-FPR metrics matter when false accusations are costly.
+
+The main lesson was that separating evidence into four independent models created more opportunities for scale imbalance, calibration mismatch, and source-specific shortcuts. The next design therefore kept multiple levels of evidence but moved them into one shared DINOv3 backbone. Layers 4, 8, and 12 provide low-, mid-, and high-level representations, while paired patch/CLS heads keep local and global evidence visible until late fusion. This preserves the original multi-view motivation with a simpler optimization path and a common feature space.
 
 That full history and its legacy measurements remain in [reelistic/JOURNAL.md](reelistic/JOURNAL.md). They are preserved as experiment history, not reported as measurements of the current DINOv3 checkpoint.
 
