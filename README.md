@@ -76,6 +76,32 @@ Prediction → human/admin review → database → approved training pool
 
 Validation data may guide model selection, but final test data never enters this loop. After retraining, a new model must be selected using development/validation evidence before any one-time final-test evaluation.
 
+## Development data and immutable audit
+
+Reelistic was developed from **three independent datasets**: SID, CIFAKE (`birdy654`), and 13 approved WildFake generator families. The organizer's COCO-real/DALL·E reference set is evaluation-only and never enters training.
+
+The completed source-pool audit produced the following immutable split inventory:
+
+| Stage | Records | Purpose |
+|---|---:|---|
+| Training manifest | 1,589,846 | Source/class/family-balanced development pool |
+| Validation manifest | 189,040 | Checkpoint selection and robustness comparison |
+| Calibration manifest | 25,374 | Threshold and probability calibration only |
+| Reserved CIFAKE test manifest | 19,962 | Development test, isolated from optimization |
+| **Total unique, decodable records** | **1,824,222** | After audit and exclusions |
+
+Before splitting, the audit decoded every candidate image, calculated a content SHA-256, removed `64,540` duplicate-content records, excluded `142` unreadable/corrupt files, retained dataset and generator-family provenance, and wrote deterministic train/validation/calibration/test manifests. When identical content appeared in more than one candidate split, the priority rule retained only one canonical record so byte-identical images could not cross split boundaries.
+
+The current DINOv3 schedule does not traverse all 1.59M training rows every epoch. It draws a fresh source- and class-balanced sample of `120,000` records per epoch for 10 epochs, keeping every source and class eligible while bounding training time.
+
+> **Audit implementation status:** the full decode + content-SHA-256 + provenance-aware audit is implemented in `reelistic/cluster/build_dataset_manifests.py`, and its counts above come from the frozen earlier manifest package. The current DINOv3 loader validates required columns and path-level split separation, but its CSV schema does not itself store or recheck content hashes. Before final submission, the exact `aigc_mixed_all.csv` used by the DINOv3 checkpoint must be frozen with its SHA-256 and matched back to the audited records. Until that check is attached, we claim reuse of the audited data pool—not that the current loader independently reproduces the complete immutable audit.
+
+### Why the test deduplication guard matters
+
+The external COCO/DALL·E test export itself contains repeated content. Its `13,841` paths (`4,998` COCO + `8,843` DALL·E) reduce to only `8,717` unique SHA-256 hashes: `5,124` paths are same-label DALL·E duplicates. The audit found **zero conflicting real/fake duplicate hashes** and **zero content-hash overlap with development data**, but counting every repeated path as independent would still give duplicated images extra weight in the final score. The smaller 250-image FN review sample independently contains seven duplicate-hash pairs (14 files), confirming that this is visible in the supplied error artifacts too.
+
+Our guard hashes the bytes of every development and test image before evaluation, rejects any test image whose hash appears in train/validation/calibration/reserved-test data, rejects duplicate hashes with conflicting labels, and emits both the organizer path-level manifest and a one-row-per-content-hash manifest. The unique-content view effectively removes repeated test copies for an independence check; we retain the path-level view separately so the official organizer weighting remains reproducible. Final reporting should show both results instead of silently benefiting—or suffering—from repeated examples.
+
 ## The model: multi-scale DINOv3 forensics
 
 The detector fine-tunes `facebook/dinov3-vitb16-pretrain-lvd1689m` and taps three depths of the ViT-B/16 backbone. A single final layer can over-specialize in semantics; the multi-scale design preserves evidence from lower-level image formation through higher-level scene consistency.
@@ -97,6 +123,28 @@ At every tapped layer, Reelistic uses two complementary views:
 
 The six resulting 512-dimensional features are concatenated into a 3,072-dimensional representation, normalized, and passed to the binary classifier. A projection head is used by the supervised contrastive objective during training and is not required for deployment.
 
+### Why one shared model is the stronger design
+
+The earlier four-model ensemble divided texture, frequency, residual-noise, and semantic evidence across separately optimized networks. That looked interpretable, but it duplicated computation, produced branch scores with different calibration, and allowed the much larger semantic branch or the quality gate to dominate. A detector can then look strong on a familiar source while failing when a new generator or platform transformation changes the balance between branches.
+
+Reelistic keeps the useful part of that idea—multiple kinds of evidence—but extracts them from **one shared representation**:
+
+- one backbone pass supplies low-, middle-, and high-level features instead of running four unrelated encoders;
+- every tapped feature lives in the same representation space, reducing cross-model scale and calibration mismatch;
+- local patch heads and global CLS heads keep forensic detail and semantic consistency explicit until late fusion;
+- the consistency and contrastive losses train the entire representation to survive platform transformations together;
+- a failure can be traced to a layer tap or head without disentangling four independently trained checkpoints.
+
+This is not a claim that one model is universally superior. It is a deliberate engineering trade-off: a simpler optimization surface and lower inference/training overhead in exchange for requiring careful multi-source validation. The preliminary internal-versus-competition AUC gap below is why we report that trade-off openly and select checkpoints using generalization evidence rather than clean accuracy alone.
+
+### Compact today, scalable tomorrow
+
+The DINOv3 ViT-B/16 backbone has `85,660,416` parameters (about **86M**). The complete detector—including all six forensic heads, normalization, classifier, and training-only projection head—has `101,532,673` parameters. That is only **5.08% of the 2B competition ceiling**, or about **19.7 times smaller** than the allowed maximum.
+
+The compact model reduces the amount of state that must be optimized, stored, exported, and served. Training further uses FP16 mixed precision, gradient checkpointing, balanced 120k-sample epochs, and a lower learning rate for the pretrained backbone. These choices make repeated adaptation to new datasets substantially more practical than retraining a multi-model ensemble, although final GPU-hour, latency, throughput, and memory benchmarks are still pending.
+
+The architecture is intentionally strict at its boundaries—RGB input, tapped hidden states, a 3,072-D fused feature, and one output logit—but configurable internally. The implementation obtains the backbone hidden size dynamically and takes tap locations and head widths from configuration. A larger DINO/ViT backbone, more taps, or wider heads can therefore reuse the same data, training, API, and ONNX pipeline. We can scale capacity when evidence justifies the cost without redesigning the browser extension, backend contract, evaluation suite, or human-review loop.
+
 ### Model specification
 
 | Property | Value |
@@ -107,8 +155,9 @@ The six resulting 512-dimensional features are concatenated into a 3,072-dimensi
 | Layer taps | 4, 8, 12 |
 | Fused feature size | 3,072 |
 | Positive class | `ai_generated` |
-| Checkpoint parameters | 101,532,673 |
-| Competition limit | Less than 2 billion parameters |
+| Backbone parameters | 85,660,416 (about 86M) |
+| Complete detector parameters | 101,532,673 |
+| Competition limit usage | 5.08% of 2 billion (about 19.7x below the limit) |
 | Selection metric | Internal-validation TPR at 1% FPR |
 | Deployment formats | PyTorch checkpoint and ONNX opset 18 |
 
@@ -239,7 +288,7 @@ Internal validation rises quickly and finishes at approximately `0.9993`, indica
 
 ## Error analysis
 
-The current error review covers all `6,114` rows in the supplied misclassification CSV and the images available locally for visual inspection: `43` COCO false positives and `250` sampled DALL·E false negatives. Because the export contains errors rather than the complete set of true and false predictions, it **cannot** establish overall accuracy, FPR, FNR, precision, or recall.
+The current error review covers all `6,114` rows in the supplied misclassification CSV and the images available locally for visual inspection: `43` COCO false positives and `250` sampled DALL·E false negatives.
 
 The score outputs imply an operating threshold near `0.9741`: the smallest false-positive score is `0.97412109`, while the largest false-negative score is `0.97363281`. This is inferred from adjacent output values and must be confirmed from the evaluation configuration.
 
@@ -291,43 +340,119 @@ curl http://127.0.0.1:8000/health
 
 ### Export ONNX
 
+The current best artifact is the epoch-2 checkpoint selected by competition TPR at 1% FPR. The local export was produced from that exact `101,532,673`-parameter state and verified with `onnx.checker`.
+
 ```bash
+pip install torch transformers onnx
 python scripts/export_onnx.py \
   --checkpoint models/reelistic_dino/checkpoints/best_competition_tpr_at_1_fpr.pt \
   --config models/reelistic_dino/configs/dinov3_multiscale_full_mixed.toml \
   --output models/reelistic_dino/checkpoints/reelistic_dinov3.onnx
 ```
 
-The exported opset-18 graph accepts an ImageNet-normalized FP32 tensor named `image` with shape `N x 3 x 224 x 224`. It returns `logit`; use `sigmoid(logit)` as `pred`, the probability that an image is AI-generated.
+| Export property | Verified value |
+|---|---|
+| Format | ONNX opset 18 |
+| File | `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx` |
+| Size | 399,719,570 bytes (381.2 MiB) |
+| SHA-256 | `7c569523f3ba7b6924b8952327b8fb9505e57fee3d6b5fb7a213ba98d7b1bac0` |
+| Input | `image`: dynamic `N x 3 x 224 x 224`, FP32, ImageNet normalized |
+| Output | `logit`: dynamic `N`, FP32; `sigmoid(logit)` is `pred` |
+| PyTorch/ONNX parity | Maximum absolute logit difference `8.46e-06` on the fixed example; passes `rtol=1e-4`, `atol=1e-4` |
 
-### Evaluate the ONNX model on your own directory
+### Required prediction script: any image or directory
 
-Install `onnxruntime`, `Pillow`, and `numpy`, then use the following inference core in a directory loop. The submission JSON should contain `image_path` and `pred` for every image.
+Install the small runtime-only dependency set:
 
-```python
-import numpy as np
-import onnxruntime as ort
-from PIL import Image
-
-MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)[:, None, None]
-STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)[:, None, None]
-session = ort.InferenceSession("reelistic_dinov3.onnx")
-
-def predict(path):
-    image = Image.open(path).convert("RGB")
-    width, height = image.size
-    scale = 224 / min(width, height)
-    image = image.resize((round(width * scale), round(height * scale)))
-    left = (image.width - 224) // 2
-    top = (image.height - 224) // 2
-    image = image.crop((left, top, left + 224, top + 224))
-    tensor = np.asarray(image, dtype=np.float32).transpose(2, 0, 1) / 255.0
-    tensor = ((tensor - MEAN) / STD)[None]
-    logit = session.run(["logit"], {"image": tensor})[0][0]
-    return float(1.0 / (1.0 + np.exp(-logit)))
+```bash
+pip install -r requirements-onnx.txt
 ```
 
-> **Before final submission:** publish the ONNX artifact in the project release or model repository and replace this note with its permanent download URL and SHA-256 checksum.
+The submission-facing script accepts either one supported image or an image directory recursively:
+
+```bash
+python scripts/predict.py path/to/image.jpg --output predictions.json
+python scripts/predict.py path/to/image_directory --output predictions.json --batch-size 16
+```
+
+It accepts JPEG, PNG, WebP, BMP, and TIFF files. The output is a JSON list containing **exactly** the two required fields for each image:
+
+```json
+[
+  {
+    "image_path": "/absolute/path/to/example.jpg",
+    "pred": 0.913742184638977
+  }
+]
+```
+
+`pred` is the confidence/probability that the image is AIGC-generated. The script uses `CPUExecutionProvider` by default because that is the runtime verified against PyTorch.
+
+### Test a labelled dataset and show all statistics
+
+Use the separate evaluation script when labels, robustness transformations, or detailed statistics are required:
+
+```bash
+python scripts/evaluate_onnx.py --input path/to/image.jpg
+python scripts/evaluate_onnx.py --input path/to/image_directory --batch-size 16
+```
+
+Every evaluation run writes:
+
+- `onnx_evaluation/predictions.json`, with at least `image_path`, `pred`, and `condition` for every evaluated image;
+- `onnx_evaluation/summary.json`, with model/runtime metadata and all computable statistics.
+
+For a labelled dataset, either arrange images below folders named `real` and `fake`/`ai` or provide a CSV manifest:
+
+```csv
+image_path,label
+images/real/example.jpg,0
+images/generated/example.png,1
+```
+
+```bash
+python scripts/evaluate_onnx.py \
+  --manifest path/to/dataset.csv \
+  --threshold 0.5 \
+  --batch-size 16 \
+  --output-dir judge_results
+```
+
+The labelled summary reports sample count, TP/TN/FP/FN, accuracy, balanced accuracy, precision, recall/sensitivity, specificity, negative predictive value, F1, Matthews correlation, ROC-AUC, PR-AUC/average precision, TPR at 1% and 5% FPR, FPR at 95% and 99% TPR, the corresponding operating thresholds, Brier score, 10-bin expected calibration error, score distribution, mean/P50/P95 inference latency, wall time, and throughput. If labels are unavailable, prediction counts, score distribution, latency, and throughput are still reported; label-dependent metrics are correctly omitted.
+
+### Optional transformation robustness
+
+Each condition is applied independently to the original image—transformations are **not chained**. Run selected conditions by repeating `--transform`:
+
+```bash
+python scripts/evaluate_onnx.py \
+  --manifest path/to/dataset.csv \
+  --transform clean \
+  --transform jpeg:50 \
+  --transform blur:2.0 \
+  --transform resize:0.25 \
+  --transform noise:0.10 \
+  --transform color:0.20 \
+  --transform crop:0.80 \
+  --output-dir judge_robustness
+```
+
+Or reproduce the complete documented 16-condition suite:
+
+```bash
+python scripts/evaluate_onnx.py \
+  --manifest path/to/dataset.csv \
+  --suite \
+  --batch-size 16 \
+  --seed 42 \
+  --output-dir judge_full_suite
+```
+
+The suite covers clean, JPEG qualities 90/70/50/30, Gaussian blur sigma 0.5/1.0/2.0, resize scales 0.5/0.25, Gaussian noise sigma 0.02/0.05/0.10, color jitter strengths 0.10/0.20, and center crop 0.80. The summary reports each condition separately and adds its ROC-AUC change from clean when both classes are present.
+
+`CPUExecutionProvider` is the correctness-first default and is the provider used for the verified PyTorch/ONNX parity result. Other hardware providers are opt-in through `--provider`; verify numerical parity before using their predictions or comparing their timing. On the development Mac, partial CoreML graph execution did not match PyTorch closely enough, so CoreML results must not be reported as model results without further investigation.
+
+> The ONNX file is generated locally and ignored by Git because of its size. It must be uploaded to the project release or model repository before judges can download it from a fresh clone.
 
 ## Repository structure
 
@@ -340,6 +465,9 @@ def predict(path):
 │   ├── src/
 │   └── checkpoints/             # Local/cloud artifacts; ignored by Git
 ├── scripts/export_onnx.py       # PyTorch-to-ONNX conversion
+├── scripts/predict.py           # Required image_path + pred submission output
+├── scripts/evaluate_onnx.py     # Judge inference, metrics, and robustness suite
+├── requirements-onnx.txt        # Minimal ONNX evaluation dependencies
 ├── docs/
 │   ├── app-workflow.svg
 │   └── model-architecture.svg

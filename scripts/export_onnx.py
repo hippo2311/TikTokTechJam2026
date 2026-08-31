@@ -4,6 +4,7 @@ The exported graph accepts ImageNet-normalized NCHW RGB tensors and returns a
 single logit. Apply sigmoid to the output to get the AI-generated probability.
 """
 import argparse
+import hashlib
 import sys
 try:
     import tomllib
@@ -12,6 +13,14 @@ except ModuleNotFoundError:
 from pathlib import Path
 
 import torch
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(8 * 1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main():
@@ -52,7 +61,11 @@ def main():
         opset_version=18,
         dynamo=False,
     )
-    print(f"Exported {output} ({output.stat().st_size / 1024**2:.1f} MB)")
+    import onnx
+    onnx.checker.check_model(onnx.load(str(output), load_external_data=True))
+    print(f"Exported {output} ({output.stat().st_size / 1024**2:.1f} MiB)")
+    print("ONNX checker: OK")
+    print(f"SHA-256: {sha256_file(output)}")
 
 
 if __name__ == "__main__":
