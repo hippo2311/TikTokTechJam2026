@@ -37,7 +37,7 @@
   <!-- Header -->
   <rect x="40" y="24" width="1320" height="100" rx="20" fill="#12121c" stroke="#334155"/>
   <rect x="64" y="44" width="8" height="60" rx="4" fill="url(#accent)"/>
-  <text x="92" y="68" class="title">Reelistic Closed-Loop Workflow</text>
+  <text x="92" y="68" class="title">Reelistic App Workflow</text>
   <text x="92" y="96" class="subtitle">Capture → infer → review → curate → retrain → validate → redeploy</text>
   <rect x="1130" y="44" width="190" height="38" rx="19" fill="#0f2f31" stroke="#25f4ee"/>
   <circle cx="1155" cy="63" r="5.5" fill="#25f4ee"/>
@@ -188,8 +188,8 @@
 
   <path d="M1146 520 V545 H178 V658" class="review"/>
 
-  <!-- Loop back to inference -->
-  <path d="M1336 725 H1380 V250 H1075" class="loop"/>
+<!-- Loop back to inference -->
+  <path d="M1336 725 H1380 V280 H1075" class="loop"/>
   <rect x="1367" y="350" width="26" height="260" rx="13" fill="#0f2f31" stroke="#25f4ee"/>
   <text x="1380" y="480" text-anchor="middle" fill="#ccfbf1" font-size="10" font-weight="800" transform="rotate(-90 1380 480)">DEPLOY VALIDATED MODEL BACK TO INFERENCE</text>
 
