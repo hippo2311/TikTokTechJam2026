@@ -3,6 +3,7 @@ import io
 import json
 import os
 import sys
+import tomllib
 import secrets
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -19,10 +20,13 @@ from .database import init_database, list_feedback, list_predictions, save_feedb
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REELISTIC_ROOT = PROJECT_ROOT / "reelistic"
 sys.path.insert(0, str(REELISTIC_ROOT))
-from aigc_detector.data.augmentations import build_eval_transform
-from aigc_detector.models.ensemble import AIGCDetectionEnsemble
+DINO_SOURCE = PROJECT_ROOT / "dino_model" / "src"
+sys.path.insert(0, str(DINO_SOURCE))
+from robust_aigc.data.transforms import basic_eval_transform
+from robust_aigc.models import DINOv3Forensic
 
-CHECKPOINT_PATH = Path(os.getenv("REELISTIC_CHECKPOINT", str(REELISTIC_ROOT / "cluster_results/seed43/best_ensemble_calibrated.pt")))
+CHECKPOINT_PATH = Path(os.getenv("DINO_CHECKPOINT", str(PROJECT_ROOT / "dino_model" / "checkpoints/best_competition_tpr_at_1_fpr.pt")))
+CONFIG_PATH = Path(os.getenv("DINO_CONFIG", str(PROJECT_ROOT / "dino_model" / "configs/dinov3_multiscale_full_mixed.toml")))
 MODEL_DEVICE = os.getenv("MODEL_DEVICE", "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
 GCS_BUCKET = os.getenv("GCS_BUCKET", "")
 GCS_CLIENT = storage.Client() if GCS_BUCKET else None
@@ -30,23 +34,13 @@ basic_auth = HTTPBasic()
 app = FastAPI(title="AI Image Check Local Detector")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 device = torch.device(MODEL_DEVICE)
+with CONFIG_PATH.open("rb") as config_file:
+    model_config = tomllib.load(config_file)
 checkpoint = torch.load(CHECKPOINT_PATH, map_location=device, weights_only=False)
-checkpoint_args = checkpoint.get("args", {})
-classifier = AIGCDetectionEnsemble(
-    semantic_backbone=checkpoint_args.get("semantic_backbone", "mobilenetv3_small_100.lamb_in1k"),
-    texture_backbone=checkpoint_args.get("texture_backbone", "resnet18"),
-    semantic_pretrained=False, texture_pretrained=False,
-    image_size=checkpoint_args.get("image_size", 128),
-    top_k_patches=checkpoint_args.get("top_k_patches", 1),
-    quality_aware_fusion=checkpoint_args.get("quality_aware_fusion", False),
-    noise_version=checkpoint_args.get("noise_version", "legacy"),
-    noise_enabled=checkpoint_args.get("noise_enabled", True),
-    branch_dropout=checkpoint_args.get("branch_dropout", 0.15),
-    explicit_gate_disagreement=checkpoint_args.get("explicit_gate_disagreement", False),
-).to(device)
-classifier.load_state_dict(checkpoint["model_state"])
+classifier = DINOv3Forensic(model_config).to(device)
+classifier.load_state_dict(checkpoint.get("model_state_dict", checkpoint.get("model_state")), strict=True)
 classifier.eval()
-processor = build_eval_transform(image_size=checkpoint_args.get("image_size", 128))
+processor = basic_eval_transform(image_size=model_config["data"].get("image_size", 224))
 init_database()
 
 
@@ -121,7 +115,7 @@ class ReviewRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": "Reelistic seed-43", "device": str(device)}
+    return {"ok": True, "model": "Reelistic DINOv3", "device": str(device)}
 
 
 @app.post("/detect")
@@ -131,12 +125,12 @@ def detect(request: DetectRequest):
         image = Image.open(io.BytesIO(base64.b64decode(raw))).convert("RGB")
         inputs = processor(image).unsqueeze(0).to(device)
         with torch.inference_mode():
-            fake_score = float(classifier.predict_proba(inputs)[0])
+            fake_score = float(torch.sigmoid(classifier(inputs)["logits"])[0])
         verdict = "ai-generated" if fake_score >= 0.5 else "not-ai"
         confidence = round((fake_score if verdict == "ai-generated" else 1 - fake_score) * 100)
         storage_uri = archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score}, request.image)
         prediction_id = save_prediction({"verdict": verdict, "confidence": confidence, "fake_probability": fake_score, "storage_uri": storage_uri})
-        return {"id": prediction_id, "verdict": verdict, "confidence": confidence, "note": "Reelistic calibrated FAKE probability"}
+        return {"id": prediction_id, "verdict": verdict, "confidence": confidence, "note": "Reelistic DINOv3 probability"}
     except Exception as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
