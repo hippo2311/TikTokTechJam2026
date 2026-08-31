@@ -5,7 +5,10 @@ single logit. Apply sigmoid to the output to get the AI-generated probability.
 """
 import argparse
 import sys
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 from pathlib import Path
 
 import torch
