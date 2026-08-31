@@ -71,7 +71,7 @@ def archive_event(kind: str, payload: dict, image_data: str | None = None):
 @app.get("/dashboard")
 def dashboard(credentials: HTTPBasicCredentials = Depends(basic_auth)):
     require_admin(credentials)
-    return FileResponse(PROJECT_ROOT / "extension" / "dashboard.html")
+    return FileResponse(PROJECT_ROOT / "extension" / "dashboard.html", headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/dashboard-assets/{asset}")
@@ -79,7 +79,7 @@ def dashboard_asset(asset: str):
     allowed = {"dashboard.css", "dashboard.js"}
     if asset not in allowed:
         raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(PROJECT_ROOT / "extension" / asset)
+    return FileResponse(PROJECT_ROOT / "extension" / asset, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 @app.get("/prediction-image/{prediction_id}")
