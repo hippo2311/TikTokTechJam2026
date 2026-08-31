@@ -31,8 +31,12 @@ Our intended protocol is:
 - freeze train, internal-validation, and test manifests before final training;
 - deduplicate by image content rather than file path alone;
 - keep generator families and source domains visible in reporting;
-- never tune on the final test result;
+- never place final-test images or labels in initial training or feedback-based retraining;
+- never use the final test result for augmentation design, checkpoint selection, hyperparameter tuning, calibration, or threshold selection;
+- evaluate the final test only after the model and decision policy are frozen;
 - keep the organizer reference set out of optimization.
+
+**Non-negotiable rule:** the final test set never trains the model. This applies to the first training run and every future human-feedback retraining cycle.
 
 The final README tables will only be filled from artifacts that identify the checkpoint, split manifest, sample count, threshold, and transformation parameters.
 

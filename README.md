@@ -16,6 +16,7 @@ The result stays lightweight for the user, while the full event is available to 
 - Images that cannot be processed are retained as `UNREVIEWED` and excluded from model-quality metrics.
 - The admin dashboard shows recent predictions, image previews, filters, accuracy over time, a confusion matrix, and review status.
 - An admin can open a prediction, inspect the image and metadata, correct its status/actual label, and write the review back to the database.
+- Admin-approved reviews can be curated into new training material for a later model version.
 
 ![Reelistic application workflow](docs/app-workflow.svg)
 
@@ -50,6 +51,28 @@ The database keeps:
 | Image archive | Captured PNG and its matching prediction/feedback event JSON in Cloud Storage |
 
 Only reviewed `CORRECT` and `WRONG` records contribute to accuracy, trend charts, and the confusion matrix. `UNREVIEWED` and processing-error records remain visible for investigation but do not change the reported metrics.
+
+### Human-in-the-loop retraining
+
+Feedback is not used for immediate online learning. A user review or admin correction is first written back to the prediction database and linked to the captured image. The administrator can then inspect the evidence and approve a reliable actual label.
+
+Approved records form a candidate training pool. Before they can influence the model, the pool is:
+
+1. audited for incorrect or ambiguous labels;
+2. checked for supported and decodable image formats;
+3. deduplicated against existing development and evaluation data;
+4. assigned to a versioned training manifest without contaminating validation or test splits—the final test set remains permanently excluded;
+5. used in an offline retraining run with the full clean and transformation evaluation suite.
+
+A retrained checkpoint is deployed only if it improves the agreed validation criteria without unacceptable regression under transformations or at low false-positive operating points. The deployment remains behind the same `/detect` API, so the extension and dashboard continue to work without model-specific changes. This creates a controlled loop:
+
+```text
+Prediction → human/admin review → database → approved training pool
+    → audit and deduplication → offline retraining and evaluation
+    → versioned checkpoint/ONNX → cloud deployment → new predictions
+```
+
+Validation data may guide model selection, but final test data never enters this loop. After retraining, a new model must be selected using development/validation evidence before any one-time final-test evaluation.
 
 ## The model: multi-scale DINOv3 forensics
 
@@ -107,6 +130,8 @@ Training uses source- and class-balanced batches from SID, CIFAKE, and approved 
 | Center crop | Keep 80% |
 
 The organizer demonstration set is evaluation-only and is never added to training.
+
+> **Strict test isolation:** the final test set is never used for initial training, feedback-based retraining, augmentation design, checkpoint selection, hyperparameter tuning, calibration, or threshold selection. It is evaluated only after the model and decision policy are frozen. No dashboard feedback record can be assigned to the final test manifest.
 
 ## Results
 
