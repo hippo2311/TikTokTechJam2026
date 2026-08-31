@@ -30,6 +30,9 @@ from robust_aigc.models import DINOv3Forensic
 CHECKPOINT_PATH = Path(os.getenv("DINO_CHECKPOINT", str(PROJECT_ROOT / "models" / "reelistic_dino" / "checkpoints/best_competition_tpr_at_1_fpr.pt")))
 CONFIG_PATH = Path(os.getenv("DINO_CONFIG", str(DINO_ROOT / "configs/dinov3_multiscale_full_mixed.toml")))
 MODEL_DEVICE = os.getenv("MODEL_DEVICE", "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
+# Deployment cutoff for the calibrated AI probability. Override only with a
+# separately documented decision-policy evaluation.
+DECISION_THRESHOLD = float(os.getenv("DINO_DECISION_THRESHOLD", "0.9"))
 GCS_BUCKET = os.getenv("GCS_BUCKET", "")
 GCS_CLIENT = storage.Client() if GCS_BUCKET else None
 basic_auth = HTTPBasic()
@@ -38,6 +41,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 device = torch.device(MODEL_DEVICE)
 with CONFIG_PATH.open("rb") as config_file:
     model_config = tomllib.load(config_file)
+if not 0.0 <= DECISION_THRESHOLD <= 1.0:
+    raise ValueError("DINO_DECISION_THRESHOLD must be between 0 and 1.")
 checkpoint = torch.load(CHECKPOINT_PATH, map_location=device, weights_only=False)
 classifier = DINOv3Forensic(model_config).to(device)
 classifier.load_state_dict(checkpoint.get("model_state_dict", checkpoint.get("model_state")), strict=True)
@@ -117,7 +122,12 @@ class ReviewRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": "Reelistic DINOv3", "device": str(device)}
+    return {
+        "ok": True,
+        "model": "Reelistic DINOv3",
+        "device": str(device),
+        "decision_threshold": DECISION_THRESHOLD,
+    }
 
 
 @app.post("/detect")
@@ -128,9 +138,9 @@ def detect(request: DetectRequest):
         inputs = processor(image).unsqueeze(0).to(device)
         with torch.inference_mode():
             fake_score = float(torch.sigmoid(classifier(inputs)["logits"])[0])
-        verdict = "ai-generated" if fake_score >= 0.5 else "not-ai"
+        verdict = "ai-generated" if fake_score >= DECISION_THRESHOLD else "not-ai"
         confidence = round((fake_score if verdict == "ai-generated" else 1 - fake_score) * 100)
-        storage_uri = archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score}, request.image)
+        storage_uri = archive_event("prediction", {"verdict": verdict, "confidence": confidence, "fake_probability": fake_score, "decision_threshold": DECISION_THRESHOLD}, request.image)
         prediction_id = save_prediction({"verdict": verdict, "confidence": confidence, "fake_probability": fake_score, "storage_uri": storage_uri})
         return {"id": prediction_id, "verdict": verdict, "confidence": confidence, "note": "Reelistic DINOv3 probability"}
     except Exception as error:

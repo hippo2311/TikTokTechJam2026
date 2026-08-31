@@ -33,6 +33,10 @@ Response:
 
 The `verdict` must be `ai-generated` or `not-ai`. The UI does not need to know which model produced the result.
 
+The deployed Reelistic DINOv3 decision cutoff is `0.9` for the calibrated AI
+probability. Set `DINO_DECISION_THRESHOLD` only when a new, documented
+operating-point evaluation selects a replacement.
+
 ## Run locally
 
 From the project root:
