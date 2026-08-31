@@ -135,7 +135,30 @@ def detect(request: DetectRequest):
         prediction_id = save_prediction({"verdict": verdict, "confidence": confidence, "fake_probability": fake_score, "storage_uri": storage_uri})
         return {"id": prediction_id, "verdict": verdict, "confidence": confidence, "note": "Reelistic DINOv3 probability"}
     except Exception as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+        # Keep failed/unsupported images visible to admins for review, but do
+        # not treat them as model evidence or include them in metrics.
+        error_message = str(error)[:500]
+        storage_uri = None
+        try:
+            storage_uri = archive_event(
+                "prediction-error",
+                {"verdict": "unreviewed", "confidence": 0, "error": error_message},
+                request.image,
+            )
+        except Exception:
+            pass
+        prediction_id = save_prediction({
+            "verdict": "unreviewed",
+            "confidence": 0,
+            "fake_probability": 0.5,
+            "storage_uri": storage_uri,
+        })
+        return {
+            "id": prediction_id,
+            "verdict": "unreviewed",
+            "confidence": 0,
+            "note": "Image could not be processed; queued for admin review",
+        }
 
 
 @app.post("/feedback")
