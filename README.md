@@ -255,6 +255,12 @@ The current error review covers all `6,114` rows in the supplied misclassificati
 
 The score outputs imply an operating threshold near `0.9741`: the smallest false-positive score is `0.97412109`, while the largest false-negative score is `0.97363281`. This is inferred from adjacent output values and must be confirmed from the evaluation configuration.
 
+### ROC curve
+
+![ROC curve for the COCO and DALL·E clean evaluation set](docs/results/coco-dalle-roc-curve.svg)
+
+The supplied clean-set ROC curve has an AUC of `0.9375`, with AI-generated images as the positive class. It summarizes discrimination across thresholds; the frozen low-FPR operating point used for the error review is a separate threshold choice.
+
 | Finding | Evidence | Interpretation / next check |
 |---|---|---|
 | Near-threshold DALL·E misses | `4,545 / 6,071` FNs (`74.86%`) score from `0.95` to just below the inferred threshold | Treat calibration/threshold selection separately from representation failures; sweep thresholds only on a complete validation holdout |
@@ -262,7 +268,28 @@ The score outputs imply an operating threshold near `0.9741`: the smallest false
 | Low-score DALL·E misses | Examples include posters and fake packaging, illustration, concept art, and anime/halftone styles | Report recall by generator and style; add group-aware hard-positive coverage where permitted |
 | Data-quality risks | `14 / 250` reviewed FN files contain PNG bytes despite `.jpg` names; seven duplicate-hash pairs were found | Decode from file content, normalize formats, and deduplicate before splitting or scoring |
 
-Representative review folders are available for [COCO false positives](aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco) and [DALL·E false negatives](aigc-error-review/false_negatives_dalle). The patterns above are hypotheses, not causal explanations: attribution, preprocessing ablations, and full-holdout score distributions are still required. Final reporting should include representative FP/FN examples, ROC/PR curves, confidence intervals, per-generator/style slices, and transformation robustness at the frozen operating point.
+### Representative errors
+
+<table>
+  <tr>
+    <th colspan="3">False positives — real COCO images predicted as AI-generated</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco/003430_score-0.9849_img162389.jpg" width="200" alt="COCO false positive showing a small bathroom"><br><sub>Bathroom interior · score 0.9849</sub></td>
+    <td align="center"><img src="aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco/002664_score-0.9810_img161623.jpg" width="200" alt="COCO false positive showing a sparse bathroom"><br><sub>Sparse bathroom · score 0.9810</sub></td>
+    <td align="center"><img src="aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco/000014_score-0.9795_img158971.jpg" width="200" alt="COCO false positive showing a low-detail seascape"><br><sub>Low-detail seascape · score 0.9795</sub></td>
+  </tr>
+  <tr>
+    <th colspan="3">False negatives — DALL·E images predicted as real</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="aigc-error-review/false_negatives_dalle/013106_score-0.0292_97a5124901787262b8abc87ed828051e.jpg" width="200" alt="DALL-E false negative showing fictional video-game packaging"><br><sub>Fictional packaging · score 0.0292</sub></td>
+    <td align="center"><img src="aigc-error-review/false_negatives_dalle/009740_score-0.0908_ab95515a27f1f038abd139d2cf8dbaa9.jpg" width="200" alt="DALL-E false negative showing a colored-pencil character drawing"><br><sub>Colored-pencil illustration · score 0.0908</sub></td>
+    <td align="center"><img src="aigc-error-review/false_negatives_dalle/006228_score-0.1144_b57c664f4718c2aa180ce43a8d5afcb6.jpg" width="200" alt="DALL-E false negative showing a monochrome manga beach scene"><br><sub>Monochrome manga style · score 0.1144</sub></td>
+  </tr>
+</table>
+
+These examples show the observed failure modes but do not establish their causes. The full review folders remain available for [COCO false positives](aigc-error-review/competition_false_positives_tpr1fpr/false_positives_coco) and [DALL·E false negatives](aigc-error-review/false_negatives_dalle). Attribution, preprocessing ablations, and full-holdout score distributions are still required. Final reporting still needs a PR curve computed from all labeled scores, confidence intervals, per-generator/style slices, and transformation robustness at the frozen operating point.
 
 ## Try the application
 
@@ -452,7 +479,7 @@ The reasoning behind architecture changes, data controls, training choices, depl
 - Confidence can shift under unseen generators, screenshots, heavy editing, or source-domain changes.
 - Human feedback may contain label noise, so dashboard accuracy reflects reviewed operational samples rather than a controlled benchmark.
 - The current prototype uses a public HTTP endpoint; a production release should add HTTPS, API authentication, restricted CORS, rate limiting, retention controls, and service monitoring.
-- Final clean/robust benchmark tables, ONNX latency, representative false positives, and representative false negatives are pending.
+- WildFake/SID clean and robustness tables, ONNX latency, a full-score PR curve, and confidence intervals are pending.
 
 ## Acknowledgements
 

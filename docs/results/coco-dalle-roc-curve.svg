@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700" role="img" aria-labelledby="title desc">
+  <title id="title">ROC curve for the COCO and DALL-E clean evaluation set</title>
+  <rect width="1100" height="700" fill="#ffffff"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="110" y="48" fill="#111111" font-size="26" font-weight="700">ROC curve — COCO / DALL·E</text>
+    <text x="110" y="76" fill="#222222" font-size="18">AUC = 0.9375 · positive class: AI-generated images</text>
+
+    <g stroke="#e5e7eb" stroke-width="1">
+      <path d="M110 90V610M330 90V610M550 90V610M770 90V610M990 90V610"/>
+      <path d="M110 610H990M110 480H990M110 350H990M110 220H990M110 90H990"/>
+    </g>
+
+    <path d="M110 610L990 90" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="8 8"/>
+    <path d="M110 610
+             L114 475
+             L135 314
+             L150 246
+             L163 215
+             L198 173
+             L242 142
+             L352 121
+             L550 102
+             L770 96
+             L990 90"
+          fill="none" stroke="#cc6f96" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g fill="#1f2937" font-size="15">
+      <text x="110" y="636" text-anchor="middle">0.00</text>
+      <text x="330" y="636" text-anchor="middle">0.25</text>
+      <text x="550" y="636" text-anchor="middle">0.50</text>
+      <text x="770" y="636" text-anchor="middle">0.75</text>
+      <text x="990" y="636" text-anchor="middle">1.00</text>
+
+      <text x="91" y="615" text-anchor="end">0.00</text>
+      <text x="91" y="485" text-anchor="end">0.25</text>
+      <text x="91" y="355" text-anchor="end">0.50</text>
+      <text x="91" y="225" text-anchor="end">0.75</text>
+      <text x="91" y="95" text-anchor="end">1.00</text>
+    </g>
+
+    <text x="550" y="676" text-anchor="middle" fill="#111111" font-size="19">False positive rate</text>
+    <text x="27" y="350" text-anchor="middle" fill="#111111" font-size="19" transform="rotate(-90 27 350)">True positive rate</text>
+  </g>
+</svg>
