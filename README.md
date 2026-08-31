@@ -4,8 +4,6 @@ Reelistic is an end-to-end system for detecting AI-generated images after the ki
 
 > **Submission status:** the application, DINOv3 inference path, cloud deployment, human-in-the-loop review flow, and ONNX export are implemented. Final training, validation, test, and robustness results will be inserted into the empty tables in [Results](#results).
 
-**Project guide:** start with the [system and model architecture](#the-model-multi-scale-dinov3-forensics), then read the [experiment journal](JOURNAL.md) for the unsuccessful four-branch approach and the reasoning that led to DINOv3. Preliminary AUC behavior and the current [error analysis](#error-analysis) are documented below; final result tables remain pending.
-
 ## What the app does
 
 The browser extension lets a user drag over an image on a web page. It captures the visible tab, crops the selected region, validates the capture, and sends the image to the backend. The backend returns `ai-generated` or `human-made` with a confidence score.
@@ -186,98 +184,76 @@ The organizer demonstration set is evaluation-only and is never added to trainin
 
 ## Results
 
-These tables are intentionally empty. They are the single source of truth to fill after the final training, validation, and test artifacts are supplied.
+### Test results (In Domain) 
 
-### Preliminary AUC behavior
+#### Set1: CIFake
 
-The following curves are clean redraws of the training-monitor screenshots supplied before the final result export. They are useful diagnostic evidence, but they are **not** the final clean/robustness evaluation and should not be compared as if they came from identical data distributions.
+| condition | count | roc_auc | accuracy | precision | recall | f1 | tpr_at_5_fpr | threshold_at_5_fpr |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| clean | 20000 | 0.9996 | 0.9930 | 0.9893 | 0.9968 | 0.9930 | 0.9997 | 0.0385 |
+| jpeg_q90 | 20000 | 0.9996 | 0.9926 | 0.9899 | 0.9954 | 0.9926 | 0.9995 | 0.0399 |
+| jpeg_q70 | 20000 | 0.9995 | 0.9929 | 0.9894 | 0.9964 | 0.9929 | 0.9996 | 0.0400 |
+| jpeg_q50 | 20000 | 0.9988 | 0.9863 | 0.9858 | 0.9868 | 0.9863 | 0.9974 | 0.0487 |
+| jpeg_q30 | 20000 | 0.9971 | 0.9764 | 0.9843 | 0.9681 | 0.9762 | 0.9907 | 0.0548 |
+| blur_sigma_0_5 | 20000 | 0.9990 | 0.9878 | 0.9944 | 0.9811 | 0.9877 | 0.9978 | 0.0319 |
+| blur_sigma_1_0 | 20000 | 0.9983 | 0.9838 | 0.9824 | 0.9852 | 0.9838 | 0.9959 | 0.0761 |
+| blur_sigma_2_0 | 20000 | 0.9963 | 0.9729 | 0.9727 | 0.9732 | 0.9730 | 0.9858 | 0.1440 |
+| resize_0_5 | 20000 | 0.9982 | 0.9827 | 0.9799 | 0.9856 | 0.9828 | 0.9943 | 0.0830 |
+| resize_0_25 | 20000 | 0.9886 | 0.9468 | 0.9442 | 0.9498 | 0.9470 | 0.9426 | 0.5889 |
+| noise_sigma_0_02 | 20000 | 0.9995 | 0.9923 | 0.9907 | 0.9940 | 0.9924 | 0.9996 | 0.0392 |
+| noise_sigma_0_05 | 20000 | 0.9992 | 0.9899 | 0.9891 | 0.9908 | 0.9900 | 0.9982 | 0.0392 |
+| noise_sigma_0_10 | 20000 | 0.9981 | 0.9821 | 0.9831 | 0.9812 | 0.9821 | 0.9948 | 0.0687 |
+| color_jitter_0_20 | 20000 | 0.9992 | 0.9908 | 0.9871 | 0.9946 | 0.9908 | 0.9990 | 0.0463 |
+| center_crop_0_80 | 20000 | 0.9985 | 0.9849 | 0.9848 | 0.9851 | 0.9850 | 0.9974 | 0.0586 |
 
-| Internal validation ROC-AUC | Competition ROC-AUC |
-|---|---|
-| ![Internal validation ROC-AUC across epochs](docs/results/internal-validation-roc-auc.svg) | ![Competition ROC-AUC across epochs](docs/results/competition-roc-auc.svg) |
 
-Internal validation rises quickly and finishes at approximately `0.9993`, indicating that the model separates the internal split extremely well. The competition curve peaks near the beginning of training and then declines to a displayed step-9 value of `0.9368`. This widening gap is consistent with overfitting or a source/generator distribution shift. It does not by itself identify the cause, so the next result package must include per-source and per-transformation metrics and identify the exact selected checkpoint. An earlier competition-AUC checkpoint may generalize better than the final epoch, but that choice must be made on permitted validation evidence rather than the locked final test set.
+#### Set2: WildFake
 
-### Training result
 
-| Checkpoint / epoch | Samples | Loss | Accuracy | Balanced accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | TPR @ 1% FPR | TPR @ 5% FPR | FPR @ 95% TPR | FPR @ 99% TPR |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| _Pending_ |  |  |  |  |  |  |  |  |  |  |  |  |  |
+#### Set3: SID
 
-#### Training robustness
 
-| Condition | Parameter | Samples | Accuracy | Balanced accuracy | F1 | ROC-AUC | TPR @ 1% FPR | Delta ROC-AUC vs clean |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| Clean | None |  |  |  |  |  |  |  |
-| JPEG | Quality 90 |  |  |  |  |  |  |  |
-| JPEG | Quality 70 |  |  |  |  |  |  |  |
-| JPEG | Quality 50 |  |  |  |  |  |  |  |
-| JPEG | Quality 30 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 0.5 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 1.0 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 2.0 |  |  |  |  |  |  |  |
-| Resize | Scale 0.5 |  |  |  |  |  |  |  |
-| Resize | Scale 0.25 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.02 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.05 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.20 |  |  |  |  |  |  |  |
-| Center crop | 0.80 |  |  |  |  |  |  |  |
+#### Test Results (COCO & DALLE) 
 
-### Validation result
+| condition | count | roc_auc | accuracy | precision | recall | f1 | tpr_at_5_fpr | threshold_at_5_fpr |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| clean | 8717 | 0.9375 | 0.8066 | 0.6995 | 0.9583 | 0.8087 | 0.7139 | 0.9648 |
+| jpeg_q90 | 8717 | 0.9433 | 0.8270 | 0.7261 | 0.9546 | 0.8248 | 0.7623 | 0.9595 |
+| jpeg_q70 | 8717 | 0.9376 | 0.8237 | 0.7235 | 0.9497 | 0.8213 | 0.7139 | 0.9624 |
+| jpeg_q50 | 8717 | 0.9054 | 0.7871 | 0.6843 | 0.9301 | 0.7885 | 0.5690 | 0.9673 |
+| jpeg_q30 | 8717 | 0.8301 | 0.7077 | 0.6051 | 0.9062 | 0.7257 | 0.1936 | 0.9736 |
+| blur_sigma_0_5 | 8717 | 0.9389 | 0.8185 | 0.7146 | 0.9567 | 0.8181 | 0.7303 | 0.9634 |
+| blur_sigma_1_0 | 8717 | 0.9345 | 0.8128 | 0.7078 | 0.9556 | 0.8133 | 0.6878 | 0.9658 |
+| blur_sigma_2_0 | 8717 | 0.8981 | 0.7465 | 0.6340 | 0.9597 | 0.7636 | 0.4343 | 0.9722 |
+| resize_0_5 | 8717 | 0.8881 | 0.7397 | 0.6283 | 0.9548 | 0.7579 | 0.4052 | 0.9727 |
+| resize_0_25 | 8717 | 0.7689 | 0.6196 | 0.5303 | 0.9489 | 0.6804 | 0.0495 | 0.9766 |
+| noise_sigma_0_02 | 8717 | 0.9503 | 0.8577 | 0.7707 | 0.9489 | 0.8506 | 0.7849 | 0.9551 |
+| noise_sigma_0_05 | 8717 | 0.9634 | 0.8869 | 0.8170 | 0.9470 | 0.8772 | 0.8543 | 0.9277 |
+| noise_sigma_0_10 | 8717 | 0.9156 | 0.8210 | 0.7289 | 0.9244 | 0.8151 | 0.6314 | 0.9609 |
+| color_jitter_0_20 | 8717 | 0.9305 | 0.8023 | 0.6957 | 0.9540 | 0.8046 | 0.6771 | 0.9658 |
+| center_crop_0_80 | 8717 | 0.9144 | 0.8108 | 0.7127 | 0.9325 | 0.8079 | 0.5787 | 0.9668 |
 
-| Checkpoint / epoch | Samples | Loss | Accuracy | Balanced accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | TPR @ 1% FPR | TPR @ 5% FPR | FPR @ 95% TPR | FPR @ 99% TPR |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| _Pending_ |  |  |  |  |  |  |  |  |  |  |  |  |  |
 
-#### Validation robustness
+##### Confusion Matrix
 
-| Condition | Parameter | Samples | Accuracy | Balanced accuracy | F1 | ROC-AUC | TPR @ 1% FPR | Delta ROC-AUC vs clean |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| Clean | None |  |  |  |  |  |  |  |
-| JPEG | Quality 90 |  |  |  |  |  |  |  |
-| JPEG | Quality 70 |  |  |  |  |  |  |  |
-| JPEG | Quality 50 |  |  |  |  |  |  |  |
-| JPEG | Quality 30 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 0.5 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 1.0 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 2.0 |  |  |  |  |  |  |  |
-| Resize | Scale 0.5 |  |  |  |  |  |  |  |
-| Resize | Scale 0.25 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.02 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.05 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.20 |  |  |  |  |  |  |  |
-| Center crop | 0.80 |  |  |  |  |  |  |  |
+| | Predicted Negative (0) | Predicted Positive (1) | Total |
+|---|---|---|---|
+| **Actual Negative (0)** | **TN:** 6,072 | **FP:** 42 | 6,114 |
+| **Actual Positive (1)** | **FN:** 250 | **TP:** 2,353 | 2,603 |
+| **Total** | 6,322 | 2,395 | **8,717** |
 
-### Test result
+##### Classification Metrics
 
-| Dataset / split | Samples | Accuracy | Balanced accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | TPR @ 1% FPR | TPR @ 5% FPR | FPR @ 95% TPR | FPR @ 99% TPR |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| _Pending_ |  |  |  |  |  |  |  |  |  |  |  |  |
+| Metric | Formula | Value | Percentage |
+|---|---|---|---|
+| **Accuracy** | $(\text{TP} + \text{TN}) / \text{Total}$ | 0.9665 | 96.65% |
+| **Precision** | $\text{TP} / (\text{TP} + \text{FP})$ | 0.9825 | 98.25% |
+| **Recall (Sensitivity)** | $\text{TP} / (\text{TP} + \text{FN})$ | 0.9040 | 90.40% |
+| **Specificity** | $\text{TN} / (\text{TN} + \text{FP})$ | 0.9931 | 99.31% |
+| **False Positive Rate (FPR)** | $\text{FP} / (\text{FP} + \text{TN})$ | 0.0069 | 0.69% |
+| **F1-Score** | $2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$ | 0.9416 | 94.16% |
 
-#### Test robustness
 
-| Condition | Parameter | Samples | Accuracy | Balanced accuracy | F1 | ROC-AUC | TPR @ 1% FPR | Delta ROC-AUC vs clean |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| Clean | None |  |  |  |  |  |  |  |
-| JPEG | Quality 90 |  |  |  |  |  |  |  |
-| JPEG | Quality 70 |  |  |  |  |  |  |  |
-| JPEG | Quality 50 |  |  |  |  |  |  |  |
-| JPEG | Quality 30 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 0.5 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 1.0 |  |  |  |  |  |  |  |
-| Gaussian blur | Sigma 2.0 |  |  |  |  |  |  |  |
-| Resize | Scale 0.5 |  |  |  |  |  |  |  |
-| Resize | Scale 0.25 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.02 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.05 |  |  |  |  |  |  |  |
-| Gaussian noise | Sigma 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.10 |  |  |  |  |  |  |  |
-| Color jitter | Strength 0.20 |  |  |  |  |  |  |  |
-| Center crop | 0.80 |  |  |  |  |  |  |  |
 
 ### Efficiency and deployment result
 
@@ -477,7 +453,7 @@ The suite covers clean, JPEG qualities 90/70/50/30, Gaussian blur sigma 0.5/1.0/
 
 ## Reproducibility and experiment history
 
-The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). In particular, it documents why the earlier texture/frequency/noise/semantic four-branch design did not generalize as intended and how that failure motivated the current shared-backbone, multi-scale DINOv3 design. The complete earlier investigation remains available in the [legacy Reelistic journal](reelistic/JOURNAL.md); those measurements are not presented as results of the current DINOv3 model.
+The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). The earlier branch-ensemble investigations remain available in the [legacy Reelistic journal](reelistic/JOURNAL.md); those results are not presented as results of the current DINOv3 model.
 
 ## Limitations and next steps
 
