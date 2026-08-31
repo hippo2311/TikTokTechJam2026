@@ -317,18 +317,6 @@ python scripts/export_onnx.py \
   --output models/reelistic_dino/checkpoints/reelistic_dinov3.onnx
 ```
 
-The exporter uses opset 18, dynamic batch axes, validates the graph with `onnx.checker`, and prints its SHA-256 hash.
-
-| Export property | Verified value |
-|---|---|
-| Format | ONNX opset 18 |
-| File | `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx` |
-| Size | 399,719,570 bytes (381.2 MiB) |
-| SHA-256 | `7c569523f3ba7b6924b8952327b8fb9505e57fee3d6b5fb7a213ba98d7b1bac0` |
-| Input | `image`: dynamic `N x 3 x 224 x 224`, FP32, ImageNet normalized |
-| Output | `logit`: dynamic `N`, FP32; `sigmoid(logit)` is `pred` |
-| PyTorch/ONNX parity | Maximum absolute logit difference `8.46e-06` on the fixed example; passes `rtol=1e-4`, `atol=1e-4` |
-
 ### Score any image directory and write the required JSON
 
 ```bash
@@ -446,8 +434,6 @@ The suite covers clean images, JPEG, blur, resize, noise, color jitter, and cent
 
 `CPUExecutionProvider` is the correctness-first default and is the provider used for the verified PyTorch/ONNX parity result. Other hardware providers are opt-in through `--provider`; verify numerical parity before using their predictions or comparing their timing. On the development Mac, partial CoreML graph execution did not match PyTorch closely enough, so CoreML results must not be reported as model results without further investigation.
 
-> The ONNX file is generated locally and ignored by Git because of its size. It must be uploaded to the project release or model repository before judges can download it from a fresh clone.
-
 ## Repository structure
 
 ```text
@@ -471,7 +457,7 @@ The suite covers clean images, JPEG, blur, resize, noise, color jitter, and cent
 
 ## Reproducibility and experiment history
 
-The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). The earlier branch-ensemble investigations remain available in the [legacy Reelistic journal](reelistic/JOURNAL.md); those results are not presented as results of the current DINOv3 model.
+The reasoning behind architecture changes, data controls, training choices, deployment decisions, and unresolved questions is recorded in [JOURNAL.md](JOURNAL.md). 
 
 ## Limitations and next steps
 
