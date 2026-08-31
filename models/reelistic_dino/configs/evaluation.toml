@@ -1,0 +1,78 @@
+# Held-out evaluation source of truth. Never add this data to [data.train_splits].
+[evaluation]
+name = "robustness_eval_v1"
+image_size = 224
+batch_size = 16
+num_workers = 4
+threshold = 0.5
+primary_metric = "balanced_accuracy"
+error_examples_per_type = 20
+
+# Use internal_val for development. Set --split organizer_demo only for the
+# hackathon demonstration set; it remains categorically excluded from training.
+default_split = "internal_val"
+
+[[evaluation.conditions]]
+name = "clean"
+kind = "clean"
+
+[[evaluation.conditions]]
+name = "jpeg_q90"
+kind = "jpeg"
+value = 90
+[[evaluation.conditions]]
+name = "jpeg_q70"
+kind = "jpeg"
+value = 70
+[[evaluation.conditions]]
+name = "jpeg_q50"
+kind = "jpeg"
+value = 50
+[[evaluation.conditions]]
+name = "jpeg_q30"
+kind = "jpeg"
+value = 30
+
+[[evaluation.conditions]]
+name = "blur_sigma_0_5"
+kind = "gaussian_blur"
+value = 0.5
+[[evaluation.conditions]]
+name = "blur_sigma_1_0"
+kind = "gaussian_blur"
+value = 1.0
+[[evaluation.conditions]]
+name = "blur_sigma_2_0"
+kind = "gaussian_blur"
+value = 2.0
+
+[[evaluation.conditions]]
+name = "resize_0_5"
+kind = "resize"
+value = 0.5
+[[evaluation.conditions]]
+name = "resize_0_25"
+kind = "resize"
+value = 0.25
+
+[[evaluation.conditions]]
+name = "noise_sigma_0_02"
+kind = "gaussian_noise"
+value = 0.02
+[[evaluation.conditions]]
+name = "noise_sigma_0_05"
+kind = "gaussian_noise"
+value = 0.05
+[[evaluation.conditions]]
+name = "noise_sigma_0_10"
+kind = "gaussian_noise"
+value = 0.10
+
+[[evaluation.conditions]]
+name = "color_jitter_0_20"
+kind = "color_jitter"
+value = 0.20
+[[evaluation.conditions]]
+name = "center_crop_0_80"
+kind = "center_crop"
+value = 0.80

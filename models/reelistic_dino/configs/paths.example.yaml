@@ -1,0 +1,6 @@
+# Copy to configs/paths.yaml for machine-specific defaults. Environment variables
+# AIGC_DATA_ROOT and AIGC_CACHE_ROOT take precedence over this file.
+data_root: ./data
+cache_root: ./data/cache
+checkpoint_root: ./checkpoints
+output_root: ./outputs

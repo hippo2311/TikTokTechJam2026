@@ -1,0 +1,16 @@
+# Reference-benchmark scorecard. Keep this clean-only so the organisers'
+# DALL-E-vs-COCO reference set is measured as supplied; use evaluation.toml
+# separately for transformation robustness on development data.
+[evaluation]
+name = "competition_reference_clean"
+image_size = 224
+batch_size = 32
+num_workers = 4
+threshold = 0.5
+primary_metric = "balanced_accuracy"
+error_examples_per_type = 100
+default_split = "organizer_demo"
+
+[[evaluation.conditions]]
+name = "clean"
+kind = "clean"

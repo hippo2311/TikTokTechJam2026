@@ -1,0 +1,121 @@
+# Ungated substitute used only to validate the training pipeline while DINOv3 access is pending.
+[run]
+name = "google_vit_large_forensic_smoke"
+seed = 42
+notes = "Public Google ViT-L/16 drop-in smoke test for the DINOv3-Forensic pipeline"
+
+[data]
+datasets = ["sid"]
+manifest = "${AIGC_DATA_ROOT}/manifests/sid_smoke_all.csv"
+image_size = 224
+normalization_mean = [0.5, 0.5, 0.5]
+normalization_std = [0.5, 0.5, 0.5]
+positive_class = "ai_generated"
+train_splits = ["train"]
+validation_split = "internal_val"
+test_split = "test"
+organizer_demo_split = "organizer_demo"
+allow_organizer_demo_for_training = false
+balance_classes_per_batch = true
+balance_datasets = false
+
+[model]
+backbone = "google/vit-large-patch16-224-in21k"
+architecture = "vit_large_patch16_224"
+parameter_budget = 2_000_000_000
+patch_size = 16
+tapped_layers = [8, 16, 24]
+freeze_backbone = true
+
+[forensic_head]
+local_aggregation_kernel = 3
+local_aggregation_padding = 1
+local_feature_dim = 768
+classifier_hidden_dim = 512
+classifier_dropout = 0.2
+projection_hidden_dim = 512
+projection_output_dim = 256
+
+[loss]
+classification = "bce_with_logits"
+consistency = "cosine"
+consistency_weight = 0.7
+
+[optimizer]
+name = "adamw"
+learning_rate = 2e-4
+weight_decay = 0.05
+gradient_clip_norm = 1.0
+ema_decay = 0.999
+
+[scheduler]
+name = "cosine_annealing"
+warmup_epochs = 3
+min_learning_rate = 1e-6
+
+[training]
+epochs = 30
+batch_size = 4
+gradient_accumulation_steps = 16
+effective_batch_size = 64
+num_workers = 4
+mixed_precision = "fp16"
+label_smoothing = 0.05
+save_every_epoch = true
+
+[metrics]
+primary_checkpoint_metric = "internal_val_accuracy"
+primary_checkpoint_mode = "max"
+report_every_epochs = 1
+track = ["train_loss", "internal_val_loss", "internal_val_accuracy", "roc_auc", "tpr_at_1_fpr", "fpr_at_99_tpr"]
+
+[logging]
+tensorboard = true
+jsonl = true
+csv = true
+console = true
+
+[checkpointing]
+enabled = true
+root = "${AIGC_CHECKPOINT_ROOT}"
+run_directory_template = "{started_at}_{model}_{run_name}"
+monitor = "internal_val_accuracy"
+mode = "max"
+save_last = true
+save_primary_best = true
+include_optimizer_state = true
+include_scheduler_state = true
+
+[checkpointing.tracked_metric_modes]
+tpr_at_1_fpr = "max"
+fpr_at_99_tpr = "min"
+
+[curriculum.stage1]
+epochs = [0, 5]
+name = "easy"
+jpeg_quality = [90]
+gaussian_blur_sigma = [0.5]
+resize_scale = [0.5]
+gaussian_noise_sigma = [0.02]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.0]
+
+[curriculum.stage2]
+epochs = [6, 15]
+name = "medium"
+jpeg_quality = [70, 50]
+gaussian_blur_sigma = [1.0]
+resize_scale = [0.25, 0.5]
+gaussian_noise_sigma = [0.05]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.2]
+
+[curriculum.stage3]
+epochs = [16, 30]
+name = "hard"
+jpeg_quality = [50, 30]
+gaussian_blur_sigma = [1.0, 2.0]
+resize_scale = [0.25]
+gaussian_noise_sigma = [0.05, 0.10]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.2]

@@ -21,15 +21,14 @@ from pydantic import BaseModel
 import torch
 from .database import init_database, list_feedback, list_predictions, save_feedback, save_prediction, update_prediction_review
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REELISTIC_ROOT = PROJECT_ROOT / "reelistic"
-sys.path.insert(0, str(REELISTIC_ROOT))
-DINO_SOURCE = PROJECT_ROOT / "dino_model" / "src"
+DINO_ROOT = PROJECT_ROOT / "models" / "reelistic_dino"
+DINO_SOURCE = DINO_ROOT / "src"
 sys.path.insert(0, str(DINO_SOURCE))
 from robust_aigc.data.transforms import basic_eval_transform
 from robust_aigc.models import DINOv3Forensic
 
-CHECKPOINT_PATH = Path(os.getenv("DINO_CHECKPOINT", str(PROJECT_ROOT / "dino_model" / "checkpoints/best_competition_tpr_at_1_fpr.pt")))
-CONFIG_PATH = Path(os.getenv("DINO_CONFIG", str(PROJECT_ROOT / "dino_model" / "configs/dinov3_multiscale_full_mixed.toml")))
+CHECKPOINT_PATH = Path(os.getenv("DINO_CHECKPOINT", str(PROJECT_ROOT / "models" / "reelistic_dino" / "checkpoints/best_competition_tpr_at_1_fpr.pt")))
+CONFIG_PATH = Path(os.getenv("DINO_CONFIG", str(DINO_ROOT / "configs/dinov3_multiscale_full_mixed.toml")))
 MODEL_DEVICE = os.getenv("MODEL_DEVICE", "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
 GCS_BUCKET = os.getenv("GCS_BUCKET", "")
 GCS_CLIENT = storage.Client() if GCS_BUCKET else None

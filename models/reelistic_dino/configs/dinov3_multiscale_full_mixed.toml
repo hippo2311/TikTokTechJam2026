@@ -1,0 +1,179 @@
+# Main candidate: the efficient L4+L8+L12 DINOv3 fusion selected by the
+# frozen-feature ablation. This is intentionally the plain multi-scale model;
+# SRM/gating remains a separate optional ablation rather than being conflated
+# with the architecture claim.
+
+[run]
+name = "dinov3_vitb_multiscale_full_mixed_v1"
+seed = 42
+notes = "Full DINOv3 ViT-B/16 fine-tuning with the L4+L8+L12 fusion chosen by the frozen layer-probe ablation"
+
+[data]
+datasets = ["sid", "cifake", "wildfake"]
+manifest = "${AIGC_DATA_ROOT}/manifests/aigc_mixed_all.csv"
+image_size = 224
+normalization_mean = [0.485, 0.456, 0.406]
+normalization_std = [0.229, 0.224, 0.225]
+positive_class = "ai_generated"
+train_splits = ["train"]
+validation_split = "internal_val"
+test_split = "test"
+organizer_demo_split = "organizer_demo"
+allow_organizer_demo_for_training = false
+balance_classes_per_batch = true
+balance_datasets = true
+training_augmentation = "single_transform"
+
+[model]
+backbone = "facebook/dinov3-vitb16-pretrain-lvd1689m"
+architecture = "dinov3_vit_b_16_multiscale"
+parameter_budget = 2_000_000_000
+patch_size = 16
+tapped_layers = [4, 8, 12]
+freeze_backbone = false
+gradient_checkpointing = true
+
+[forensic_head]
+local_aggregation_kernel = 3
+local_aggregation_padding = 1
+local_feature_dim = 512
+classifier_hidden_dim = 512
+classifier_dropout = 0.2
+projection_hidden_dim = 512
+projection_output_dim = 256
+
+[loss]
+classification = "bce_with_logits"
+consistency = "none"
+consistency_weight = 0.0
+prediction_consistency = "binary_js_divergence"
+prediction_consistency_weight = 0.5
+supcon = "supervised_contrastive"
+supcon_weight = 0.1
+supcon_temperature = 0.1
+
+[optimizer]
+name = "adamw"
+learning_rate = 2e-4
+backbone_learning_rate = 1e-5
+weight_decay = 0.05
+gradient_clip_norm = 1.0
+ema_decay = 0.999
+
+[scheduler]
+name = "cosine_annealing"
+warmup_epochs = 2
+min_learning_rate = 1e-6
+
+[training]
+epochs = 10
+batch_size = 64
+gradient_accumulation_steps = 1
+effective_batch_size = 64
+# A fresh, source/class-stratified subset is drawn every epoch.  Validation and
+# organiser-demo reference data remain complete and fixed.
+samples_per_epoch = 120000
+num_workers = 2
+mixed_precision = "fp16"
+label_smoothing = 0.05
+save_every_epoch = true
+
+[metrics]
+primary_checkpoint_metric = "internal_val_tpr_at_1_fpr"
+primary_checkpoint_mode = "max"
+report_every_epochs = 1
+threshold = 0.5
+track = ["train_loss", "train_prediction_consistency_loss", "train_supcon_loss", "internal_val_loss", "internal_val_accuracy", "internal_val_tpr_at_1_fpr", "internal_val_tpr_at_5_fpr", "internal_val_fpr_at_99_tpr", "internal_val_fpr_at_95_tpr", "competition_tpr_at_1_fpr", "competition_tpr_at_5_fpr", "competition_fpr_at_99_tpr", "competition_fpr_at_95_tpr"]
+
+[reference_evaluation]
+# This organiser reference set is evaluated only; it is never added to training.
+enabled = true
+manifest = "${AIGC_COMPETITION_MANIFEST}"
+split = "organizer_demo"
+batch_size = 64
+num_workers = 4
+threshold = 0.5
+
+[logging]
+tensorboard = true
+jsonl = true
+csv = true
+console = true
+batch_log_every_steps = 1
+
+[checkpointing]
+enabled = true
+root = "${AIGC_CHECKPOINT_ROOT}"
+run_directory_template = "{started_at}_{model}_{run_name}"
+monitor = "internal_val_tpr_at_1_fpr"
+mode = "max"
+save_last = true
+save_primary_best = true
+include_optimizer_state = true
+include_scheduler_state = true
+
+[checkpointing.tracked_metric_modes]
+internal_val_tpr_at_1_fpr = "max"
+internal_val_tpr_at_5_fpr = "max"
+internal_val_fpr_at_99_tpr = "min"
+internal_val_fpr_at_95_tpr = "min"
+competition_tpr_at_1_fpr = "max"
+competition_tpr_at_5_fpr = "max"
+competition_fpr_at_99_tpr = "min"
+competition_fpr_at_95_tpr = "min"
+
+# Exactly one corruption is sampled for the augmented view; clean images stay
+# in the classification path and are never replaced by chained transforms.
+[curriculum.stage1]
+epochs = [0, 2]
+name = "single_transform_easy"
+jpeg_quality = [90]
+gaussian_blur_sigma = [0.5, 1.0]
+resize_scale = [0.5]
+gaussian_noise_sigma = [0.02, 0.05]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.1]
+
+[curriculum.stage1.transform_weights]
+jpeg = 0.10
+gaussian_blur = 0.25
+resize = 0.10
+gaussian_noise = 0.35
+color_jitter = 0.10
+center_crop = 0.10
+
+[curriculum.stage2]
+epochs = [3, 6]
+name = "single_transform_medium"
+jpeg_quality = [70, 50]
+gaussian_blur_sigma = [1.0, 2.0]
+resize_scale = [0.25, 0.5]
+gaussian_noise_sigma = [0.05, 0.10]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.2]
+
+[curriculum.stage2.transform_weights]
+jpeg = 0.10
+gaussian_blur = 0.25
+resize = 0.10
+gaussian_noise = 0.35
+color_jitter = 0.10
+center_crop = 0.10
+
+[curriculum.stage3]
+epochs = [7, 9]
+name = "single_transform_hard"
+jpeg_quality = [50, 30]
+gaussian_blur_sigma = [1.0, 2.0]
+resize_scale = [0.25]
+gaussian_noise_sigma = [0.05, 0.10]
+center_crop_fraction = [0.8]
+color_jitter_strength = [0.2]
+
+[curriculum.stage3.transform_weights]
+jpeg = 0.10
+gaussian_blur = 0.25
+resize = 0.10
+gaussian_noise = 0.35
+color_jitter = 0.10
+center_crop = 0.10

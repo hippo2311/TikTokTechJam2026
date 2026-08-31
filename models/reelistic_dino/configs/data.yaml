@@ -1,0 +1,16 @@
+seed: 42
+image_size: 224
+split_ratios:
+  train: 0.8
+  internal_val: 0.1
+  test: 0.1
+datasets:
+  sid:
+    huggingface_repo: saberzl/SID_Set
+    root_name: sid
+  cifake:
+    kaggle_slug: birdy654/cifake-real-and-ai-generated-synthetic-images
+    root_name: cifake
+  wildfake:
+    modelscope_repo: hy2628982280/WildFake
+    root_name: wildfake

@@ -17,6 +17,8 @@ reelistic/**/.cache/
 *.safetensors
 dino_model/.git/
 dino_model/checkpoints/
+models/reelistic_dino/checkpoints/
+__pycache__/
 
 # OS and IDE files
 .DS_Store
