@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700" role="img" aria-labelledby="title desc">
   <title id="title">ROC curve for the COCO and DALL-E clean evaluation set</title>
+  <desc id="desc">Receiver operating characteristic curve with area under the curve 0.9375. The positive class is AI-generated images.</desc>
   <rect width="1100" height="700" fill="#ffffff"/>
 
   <g font-family="Arial, Helvetica, sans-serif">
