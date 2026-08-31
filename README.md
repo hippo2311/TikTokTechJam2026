@@ -296,34 +296,103 @@ The hackathon prototype is hosted on Google Cloud and may be stopped outside the
 
 The extension currently points to the deployed Google Cloud API configured in `extension/background.js`. For another backend, update `API` there and in `extension/dashboard.js`, then update `host_permissions` in `extension/manifest.json`.
 
-### Run the PyTorch API locally
+### Test-run the app locally with the PyTorch API
 
-The DINOv3 backbone is gated on Hugging Face. Request access to `facebook/dinov3-vitb16-pretrain-lvd1689m`, authenticate with `hf auth login`, and place the competition checkpoint at:
+The fine-tuned [`.pt` checkpoint](https://huggingface.co/omgacai/reelistic-dino/blob/main/checkpoints/best_competition_tpr_at_1_fpr.pt) is hosted in the [Reelistic DINO Hugging Face repository](https://huggingface.co/omgacai/reelistic-dino). The DINOv3 backbone is gated separately: first request access to [`facebook/dinov3-vitb16-pretrain-lvd1689m`](https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m), then authenticate with a Hugging Face token that has permission to read it.
 
-```text
-models/reelistic_dino/checkpoints/best_competition_tpr_at_1_fpr.pt
-```
-
-Then run:
+From a fresh clone, this block creates an environment, installs the API, downloads the exact checkpoint to the path expected by `detector/detector.py`, and starts the app:
 
 ```bash
+# Run from the repository root.
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r detector/requirements.txt
-uvicorn detector.detector:app --host 127.0.0.1 --port 8000
-curl http://127.0.0.1:8000/health
+source .venv/bin/activate                 # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r detector/requirements.txt
+
+# Required once: paste a read token with access to the gated DINOv3 backbone.
+hf auth login
+
+# Download the competition checkpoint (.pt) from omgacai/reelistic-dino.
+hf download omgacai/reelistic-dino \
+  checkpoints/best_competition_tpr_at_1_fpr.pt \
+  --local-dir models/reelistic_dino
+
+# Confirm that the file landed at the API's default checkpoint path.
+test -f models/reelistic_dino/checkpoints/best_competition_tpr_at_1_fpr.pt
+
+# Start the PyTorch API. Set MODEL_DEVICE=cpu for the most portable judge run;
+# omit it to let the app select CUDA or Apple MPS when available.
+MODEL_DEVICE=cpu uvicorn detector.detector:app --host 127.0.0.1 --port 8000
 ```
 
-### Export ONNX
-
-The current best artifact is the epoch-2 checkpoint selected by competition TPR at 1% FPR. The local export was produced from that exact `101,532,673`-parameter state and verified with `onnx.checker`.
+Leave that terminal running. In a second terminal, verify both model loading and a real prediction. `TEST_IMAGE` can be any JPEG, PNG, WebP, BMP, or TIFF image:
 
 ```bash
-pip install torch transformers onnx
+source .venv/bin/activate
+curl --fail --silent http://127.0.0.1:8000/health | python -m json.tool
+
+export TEST_IMAGE="path/to/test-image.jpg"
+python - "$TEST_IMAGE" <<'PY'
+import base64
+import json
+import mimetypes
+import pathlib
+import sys
+import urllib.request
+
+path = pathlib.Path(sys.argv[1])
+mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+data_url = f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}"
+request = urllib.request.Request(
+    "http://127.0.0.1:8000/detect",
+    data=json.dumps({"image": data_url}).encode(),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+with urllib.request.urlopen(request) as response:
+    print(json.dumps(json.load(response), indent=2))
+PY
+
+# Optional: open the local admin dashboard (default login: admin / change-me).
+# macOS: open http://127.0.0.1:8000/dashboard
+# Linux: xdg-open http://127.0.0.1:8000/dashboard
+```
+
+A successful `/health` response names `Reelistic DINOv3` and its device. A successful `/detect` response contains `verdict` and `confidence`; model startup can take longer on the first run while Transformers downloads the gated backbone.
+
+### Export the PyTorch checkpoint to ONNX
+
+ONNX makes deployment more robust at the **engineering boundary**: it freezes inference into a framework-neutral graph, removes Python model-class code from the serving path, supports reproducible CPU execution through ONNX Runtime, and keeps the same artifact usable across hardware execution providers. Dynamic batch axes allow judges to trade latency for throughput without re-exporting. This improves portability and dependency stability; it does **not** by itself make the classifier more accurate or resistant to image transformations, which is why we test those properties separately below.
+
+The export uses opset 18, preserves the `N x 3 x 224 x 224` input contract, emits raw logits, and runs `onnx.checker` before reporting the artifact hash:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements-onnx.txt
+python -m pip install torch transformers==4.56.2 huggingface_hub onnx
+
+# If the checkpoint was not downloaded in the previous section:
+hf download omgacai/reelistic-dino \
+  checkpoints/best_competition_tpr_at_1_fpr.pt \
+  --local-dir models/reelistic_dino
+
 python scripts/export_onnx.py \
   --checkpoint models/reelistic_dino/checkpoints/best_competition_tpr_at_1_fpr.pt \
   --config models/reelistic_dino/configs/dinov3_multiscale_full_mixed.toml \
   --output models/reelistic_dino/checkpoints/reelistic_dinov3.onnx
+
+# Independent structural check and a readable I/O contract.
+python - <<'PY'
+import onnx
+
+path = "models/reelistic_dino/checkpoints/reelistic_dinov3.onnx"
+model = onnx.load(path, load_external_data=True)
+onnx.checker.check_model(model)
+for value in [*model.graph.input, *model.graph.output]:
+    dims = [dim.dim_param or dim.dim_value for dim in value.type.tensor_type.shape.dim]
+    print(value.name, dims)
+print("ONNX checker: OK")
+PY
 ```
 
 | Export property | Verified value |
@@ -336,7 +405,7 @@ python scripts/export_onnx.py \
 | Output | `logit`: dynamic `N`, FP32; `sigmoid(logit)` is `pred` |
 | PyTorch/ONNX parity | Maximum absolute logit difference `8.46e-06` on the fixed example; passes `rtol=1e-4`, `atol=1e-4` |
 
-### Required prediction script: any image or directory
+### Score any image directory and write the required JSON
 
 Install the small runtime-only dependency set:
 
@@ -344,7 +413,7 @@ Install the small runtime-only dependency set:
 pip install -r requirements-onnx.txt
 ```
 
-The submission-facing script accepts either one supported image or an image directory recursively:
+The submission-facing script accepts either one supported image or an image directory recursively. It outputs the confidence that each image is AIGC-generated:
 
 ```bash
 python scripts/predict.py path/to/image.jpg --output predictions.json
@@ -364,21 +433,54 @@ It accepts JPEG, PNG, WebP, BMP, and TIFF files. The output is a JSON list conta
 
 `pred` is the confidence/probability that the image is AIGC-generated. The script uses `CPUExecutionProvider` by default because that is the runtime verified against PyTorch.
 
-### Test a labelled dataset and show all statistics
+### Judge evaluation on two labelled datasets
 
-Use the separate evaluation script when labels, robustness transformations, or detailed statistics are required:
+Use `scripts/evaluate_onnx.py` when labels, robustness transformations, or detailed statistics are required. Judges can use any two datasets without changing code. The simplest layout is one `real/` folder (label `0`) and one `fake/`, `ai/`, or `aigc/` folder (label `1`) inside each dataset:
 
-```bash
-python scripts/evaluate_onnx.py --input path/to/image.jpg
-python scripts/evaluate_onnx.py --input path/to/image_directory --batch-size 16
+```text
+judge_data/
+├── dataset_one/
+│   ├── real/
+│   └── fake/
+└── dataset_two/
+    ├── real/
+    └── fake/
 ```
 
-Every evaluation run writes:
+Run both clean test sets with separate output directories so no result is overwritten:
 
-- `onnx_evaluation/predictions.json`, with at least `image_path`, `pred`, and `condition` for every evaluated image;
-- `onnx_evaluation/summary.json`, with model/runtime metadata and all computable statistics.
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements-onnx.txt
 
-For a labelled dataset, either arrange images below folders named `real` and `fake`/`ai` or provide a CSV manifest:
+export ONNX_MODEL="models/reelistic_dino/checkpoints/reelistic_dinov3.onnx"
+export DATASET_ONE="judge_data/dataset_one"
+export DATASET_TWO="judge_data/dataset_two"
+
+python scripts/evaluate_onnx.py \
+  --model "$ONNX_MODEL" \
+  --input "$DATASET_ONE" \
+  --threshold 0.5 \
+  --batch-size 16 \
+  --output-dir judge_results/dataset_one_clean
+
+python scripts/evaluate_onnx.py \
+  --model "$ONNX_MODEL" \
+  --input "$DATASET_TWO" \
+  --threshold 0.5 \
+  --batch-size 16 \
+  --output-dir judge_results/dataset_two_clean
+
+python -m json.tool judge_results/dataset_one_clean/summary.json
+python -m json.tool judge_results/dataset_two_clean/summary.json
+```
+
+Every evaluation run writes the following files below the selected `--output-dir`:
+
+- `predictions.json`, with at least `image_path`, `pred`, and `condition` for every evaluated image;
+- `summary.json`, with model/runtime metadata and all computable statistics.
+
+If a dataset does not use class-named folders, provide a CSV manifest. Relative image paths are resolved from the manifest's directory:
 
 ```csv
 image_path,label
@@ -388,6 +490,7 @@ images/generated/example.png,1
 
 ```bash
 python scripts/evaluate_onnx.py \
+  --model models/reelistic_dino/checkpoints/reelistic_dinov3.onnx \
   --manifest path/to/dataset.csv \
   --threshold 0.5 \
   --batch-size 16 \
@@ -396,12 +499,13 @@ python scripts/evaluate_onnx.py \
 
 The labelled summary reports sample count, TP/TN/FP/FN, accuracy, balanced accuracy, precision, recall/sensitivity, specificity, negative predictive value, F1, Matthews correlation, ROC-AUC, PR-AUC/average precision, TPR at 1% and 5% FPR, FPR at 95% and 99% TPR, the corresponding operating thresholds, Brier score, 10-bin expected calibration error, score distribution, mean/P50/P95 inference latency, wall time, and throughput. If labels are unavailable, prediction counts, score distribution, latency, and throughput are still reported; label-dependent metrics are correctly omitted.
 
-### Optional transformation robustness
+### Optional augmentation and transformation robustness
 
 Each condition is applied independently to the original image—transformations are **not chained**. Run selected conditions by repeating `--transform`:
 
 ```bash
 python scripts/evaluate_onnx.py \
+  --model "$ONNX_MODEL" \
   --manifest path/to/dataset.csv \
   --transform clean \
   --transform jpeg:50 \
@@ -413,15 +517,24 @@ python scripts/evaluate_onnx.py \
   --output-dir judge_robustness
 ```
 
-Or reproduce the complete documented 16-condition suite:
+Or let judges reproduce the complete documented 16-condition suite on **both** datasets:
 
 ```bash
 python scripts/evaluate_onnx.py \
-  --manifest path/to/dataset.csv \
+  --model "$ONNX_MODEL" \
+  --input "$DATASET_ONE" \
   --suite \
   --batch-size 16 \
   --seed 42 \
-  --output-dir judge_full_suite
+  --output-dir judge_results/dataset_one_augmented
+
+python scripts/evaluate_onnx.py \
+  --model "$ONNX_MODEL" \
+  --input "$DATASET_TWO" \
+  --suite \
+  --batch-size 16 \
+  --seed 42 \
+  --output-dir judge_results/dataset_two_augmented
 ```
 
 The suite covers clean, JPEG qualities 90/70/50/30, Gaussian blur sigma 0.5/1.0/2.0, resize scales 0.5/0.25, Gaussian noise sigma 0.02/0.05/0.10, color jitter strengths 0.10/0.20, and center crop 0.80. The summary reports each condition separately and adds its ROC-AUC change from clean when both classes are present.
