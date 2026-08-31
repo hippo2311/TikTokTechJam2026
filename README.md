@@ -2,8 +2,6 @@
 
 Reelistic is an end-to-end system for detecting AI-generated images after the kinds of transformations that happen on real platforms: JPEG recompression, blur, resizing, noise, color adjustment, and cropping. It combines a browser extension, a cloud-hosted inference API, a human-review dashboard, and a multi-scale DINOv3 forensic classifier.
 
-> **Submission status:** the application, DINOv3 inference path, cloud deployment, human-in-the-loop review flow, and ONNX export are implemented. Final training, validation, test, and robustness results will be inserted into the empty tables in [Results](#results).
-
 ## What the app does
 
 The browser extension lets a user drag over an image on a web page. It captures the visible tab, crops the selected region, validates the capture, and sends the image to the backend. The backend returns `ai-generated` or `human-made` with a confidence score.
@@ -91,8 +89,6 @@ The completed source-pool audit produced the following immutable split inventory
 Before splitting, the audit decoded every candidate image, calculated a content SHA-256, removed `64,540` duplicate-content records, excluded `142` unreadable/corrupt files, retained dataset and generator-family provenance, and wrote deterministic train/validation/calibration/test manifests. When identical content appeared in more than one candidate split, the priority rule retained only one canonical record so byte-identical images could not cross split boundaries.
 
 The current DINOv3 schedule does not traverse all 1.59M training rows every epoch. It draws a fresh source- and class-balanced sample of `120,000` records per epoch for 10 epochs, keeping every source and class eligible while bounding training time.
-
-> **Audit implementation status:** the full decode + content-SHA-256 + provenance-aware audit is implemented in `reelistic/cluster/build_dataset_manifests.py`, and its counts above come from the frozen earlier manifest package. The current DINOv3 loader validates required columns and path-level split separation, but its CSV schema does not itself store or recheck content hashes. Before final submission, the exact `aigc_mixed_all.csv` used by the DINOv3 checkpoint must be frozen with its SHA-256 and matched back to the audited records. Until that check is attached, we claim reuse of the audited data pool—not that the current loader independently reproduces the complete immutable audit.
 
 ### Why the test deduplication guard matters
 
@@ -252,15 +248,6 @@ The organizer demonstration set is evaluation-only and is never added to trainin
 | **Specificity** | $\text{TN} / (\text{TN} + \text{FP})$ | 0.9931 | 99.31% |
 | **False Positive Rate (FPR)** | $\text{FP} / (\text{FP} + \text{TN})$ | 0.0069 | 0.69% |
 | **F1-Score** | $2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$ | 0.9416 | 94.16% |
-
-
-
-### Efficiency and deployment result
-
-| Format | Model size | Device | Batch size | Mean latency | P95 latency | Throughput | Peak memory |
-|---|---:|---|---:|---:|---:|---:|---:|
-| PyTorch |  |  |  |  |  |  |  |
-| ONNX Runtime | 382 MB |  |  |  |  |  |  |
 
 ## Error analysis
 
