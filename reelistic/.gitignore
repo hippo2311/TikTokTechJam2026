@@ -1,0 +1,27 @@
+.DS_Store
+**/.DS_Store
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+.envs/
+.cache/
+.apptainer-cache/
+
+# Datasets, checkpoints, and generated experiment output are external artifacts.
+Dataset/
+cluster_outputs/
+cluster_results/
+phase_experiments/
+full_swing_checkpoints/
+local_results/
+*.pt
+*.pth
+*.ckpt
+
+# Keep only the log-directory placeholder in source control.
+slurm/logs/*
+!slurm/logs/.gitkeep
+
+predictions*.json
+robustness_metrics.json
