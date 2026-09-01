@@ -4,23 +4,22 @@ Reelistic is an end-to-end system for detecting AI-generated images after the ki
 
 ## Quick start: run the ONNX model
 
-Install the lightweight runtime and download the pre-exported ONNX model from Hugging Face:
+The ONNX model is included in this branch through Git LFS. Clone the branch, then run the organiser script on any image:
 
 ```bash
-python -m pip install -r requirements-onnx.txt huggingface_hub
-hf download omgacai/reelistic-dino \
-  checkpoints/reelistic_dinov3.onnx \
-  --local-dir models/reelistic_dino
-python scripts/run_onnx_demo.py path/to/image.jpg
+git clone --branch codex/onnx-reviewer-quickstart \
+  https://github.com/hippo2311/TikTokTechJam2026.git
+cd TikTokTechJam2026
+./scripts/run_organizer_demo.sh path/to/image.jpg
 ```
 
-The script prints `ai-generated` or `authentic` and applies the documented **0.9648** decision threshold (the clean COCO/DALL·E 5%-FPR operating point). To process a folder or save results:
+The script creates a local Python environment, installs the ONNX Runtime dependencies, retrieves the model with Git LFS if it is missing, and prints an `ai-generated` or `authentic` verdict. It uses the documented **0.9648** decision threshold (the clean COCO/DALL·E 5%-FPR operating point).
+
+Install [Git LFS](https://git-lfs.com/) before cloning. If the clone was made without Git LFS, install it and rerun the script; it will retrieve the model automatically. To process a folder and save results:
 
 ```bash
-python scripts/run_onnx_demo.py path/to/images --output results.json
+./scripts/run_organizer_demo.sh path/to/images results.json
 ```
-
-The model is saved at `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx`, which is the default path used by the script. If the Hugging Face model repository is private, run `hf auth login` first.
 
 ## What the app does
 
