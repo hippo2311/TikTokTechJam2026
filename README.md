@@ -4,10 +4,13 @@ Reelistic is an end-to-end system for detecting AI-generated images after the ki
 
 ## Quick start: run the ONNX model
 
-After downloading or exporting `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx`, run:
+Install the lightweight runtime and download the pre-exported ONNX model from Hugging Face:
 
 ```bash
-python -m pip install -r requirements-onnx.txt
+python -m pip install -r requirements-onnx.txt huggingface_hub
+hf download omgacai/reelistic-dino \
+  checkpoints/reelistic_dinov3.onnx \
+  --local-dir models/reelistic_dino
 python scripts/run_onnx_demo.py path/to/image.jpg
 ```
 
@@ -17,7 +20,7 @@ The script prints `ai-generated` or `authentic` and applies the documented **0.9
 python scripts/run_onnx_demo.py path/to/images --output results.json
 ```
 
-If the ONNX file is not present, follow [Export the PyTorch checkpoint to ONNX](#export-the-pytorch-checkpoint-to-onnx) once, then rerun the command above.
+The model is saved at `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx`, which is the default path used by the script. If the Hugging Face model repository is private, run `hf auth login` first.
 
 ## What the app does
 
