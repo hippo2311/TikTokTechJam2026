@@ -15,6 +15,21 @@ cd TikTokTechJam2026
 
 The script creates a local Python environment, installs the ONNX Runtime dependencies, retrieves the model with Git LFS if it is missing, and prints an `ai-generated` or `authentic` verdict. It uses the documented **0.9648** decision threshold (the clean COCO/DALL·E 5%-FPR operating point).
 
+#### Verified example
+
+With a local test image such as `data/test.png`, run from the project root:
+
+```bash
+git switch codex/onnx-reviewer-quickstart
+./scripts/run_organizer_demo.sh data/test.png
+```
+
+Expected output:
+
+```text
+test.png: authentic (AI probability 0.7586; threshold 0.9648)
+```
+
 Install [Git LFS](https://git-lfs.com/) before cloning. If the clone was made without Git LFS, install it and rerun the script; it will retrieve the model automatically. To process a folder and save results:
 
 ```bash
