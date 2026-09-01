@@ -2,6 +2,23 @@
 
 Reelistic is an end-to-end system for detecting AI-generated images after the kinds of transformations that happen on real platforms: JPEG recompression, blur, resizing, noise, color adjustment, and cropping. It combines a browser extension, a cloud-hosted inference API, a human-review dashboard, and a multi-scale DINOv3 forensic classifier.
 
+## Quick start: run the ONNX model
+
+After downloading or exporting `models/reelistic_dino/checkpoints/reelistic_dinov3.onnx`, run:
+
+```bash
+python -m pip install -r requirements-onnx.txt
+python scripts/run_onnx_demo.py path/to/image.jpg
+```
+
+The script prints `ai-generated` or `authentic` and applies the documented **0.9648** decision threshold (the clean COCO/DALL·E 5%-FPR operating point). To process a folder or save results:
+
+```bash
+python scripts/run_onnx_demo.py path/to/images --output results.json
+```
+
+If the ONNX file is not present, follow [Export the PyTorch checkpoint to ONNX](#export-the-pytorch-checkpoint-to-onnx) once, then rerun the command above.
+
 ## What the app does
 
 The browser extension lets a user drag over an image on a web page. It captures the visible tab, crops the selected region, validates the capture, and sends the image to the backend. The backend returns `ai-generated` or `human-made` with a confidence score.
