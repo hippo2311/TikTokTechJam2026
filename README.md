@@ -364,6 +364,8 @@ The extension currently points to the deployed Google Cloud API configured in `e
 
 ### Export the PyTorch checkpoint to ONNX
 
+| Only needed if the onnx checkpoint on the repo is not loading easily, else just use the checkpoint under models/reelistic_dino/checkpoints/reelistic_dinov3.onnx
+
 Download the fine-tuned [`.pt` checkpoint](https://huggingface.co/omgacai/reelistic-dino/blob/main/checkpoints/best_competition_tpr_at_1_fpr.pt) from the [Reelistic DINO model repository](https://huggingface.co/omgacai/reelistic-dino). Access to the gated [DINOv3 backbone](https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m) is also required.
 
 ONNX freezes inference into a portable graph, removes the Python model class from the runtime, and supports reproducible CPU execution plus hardware-specific providers. Dynamic batching can improve throughput without re-exporting. This makes deployment more robust, but does not itself improve detection accuracy or transformation robustness.
