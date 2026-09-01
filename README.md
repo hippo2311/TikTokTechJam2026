@@ -21,16 +21,18 @@ The script creates a local Python environment, installs the ONNX Runtime depende
 
 #### Verified example
 
-With a local test image such as `data/test.png`, run from the project root:
+With the local example images, run from the project root:
 
 ```bash
-./scripts/run_organizer_demo.sh data/test.png
+./scripts/run_organizer_demo.sh --mode default data/real.JPG
+./scripts/run_organizer_demo.sh --mode default data/ai.png
 ```
 
 Expected output:
 
 ```text
-test.png: authentic (AI probability 0.7586; threshold 0.9648)
+real.JPG: authentic (AI probability 0.2076; threshold 0.5000)
+ai.png: ai-generated (AI probability 0.9144; threshold 0.5000)
 ```
 
 Install [Git LFS](https://git-lfs.com/) before cloning. If the clone was made without Git LFS, install it and rerun the script; it will retrieve the model automatically. To process a folder and save results:
