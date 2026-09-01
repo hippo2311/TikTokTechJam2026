@@ -4,11 +4,10 @@ Reelistic is an end-to-end system for detecting AI-generated images after the ki
 
 ## Quick start: run the ONNX model
 
-The ONNX model is included in this branch through Git LFS. Clone the branch, then run the organiser script on any image:
+The ONNX model is included through Git LFS. Clone the repository, then run the organiser script on any image:
 
 ```bash
-git clone --branch codex/onnx-reviewer-quickstart \
-  https://github.com/hippo2311/TikTokTechJam2026.git
+git clone https://github.com/hippo2311/TikTokTechJam2026.git
 cd TikTokTechJam2026
 ./scripts/run_organizer_demo.sh path/to/image.jpg
 ```
@@ -25,7 +24,6 @@ The script creates a local Python environment, installs the ONNX Runtime depende
 With a local test image such as `data/test.png`, run from the project root:
 
 ```bash
-git switch codex/onnx-reviewer-quickstart
 ./scripts/run_organizer_demo.sh data/test.png
 ```
 
