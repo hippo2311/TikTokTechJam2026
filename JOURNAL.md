@@ -62,8 +62,6 @@ This was a useful failure rather than a discarded experiment. It exposed several
 
 The main lesson was that separating evidence into four independent models created more opportunities for scale imbalance, calibration mismatch, and source-specific shortcuts. The next design therefore kept multiple levels of evidence but moved them into one shared DINOv3 backbone. Layers 4, 8, and 12 provide low-, mid-, and high-level representations, while paired patch/CLS heads keep local and global evidence visible until late fusion. This preserves the original multi-view motivation with a simpler optimization path and a common feature space.
 
-That full history and its legacy measurements remain in [reelistic/JOURNAL.md](reelistic/JOURNAL.md). They are preserved as experiment history, not reported as measurements of the current DINOv3 checkpoint.
-
 ## 4. Why move to DINOv3?
 
 We wanted one strong visual backbone that could expose features at multiple abstraction levels without maintaining several unrelated heavyweight encoders. DINOv3 ViT-B/16 provides a natural feature hierarchy and stays far below the 2B-parameter competition limit.
