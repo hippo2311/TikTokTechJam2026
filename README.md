@@ -13,7 +13,12 @@ cd TikTokTechJam2026
 ./scripts/run_organizer_demo.sh path/to/image.jpg
 ```
 
-The script creates a local Python environment, installs the ONNX Runtime dependencies, retrieves the model with Git LFS if it is missing, and prints an `ai-generated` or `authentic` verdict. It uses the documented **0.9648** decision threshold (the clean COCO/DALL·E 5%-FPR operating point).
+The script creates a local Python environment, installs the ONNX Runtime dependencies, retrieves the model with Git LFS if it is missing, and prints an `ai-generated` or `authentic` verdict.
+
+| Mode | Command | Threshold | Use case |
+|---|---|---:|---|
+| **Benchmark** (default) | `./scripts/run_organizer_demo.sh --mode benchmark path/to/image.jpg` | 0.9648 | Clean COCO/DALL·E 5%-FPR operating point; minimizes false positives. |
+| **Default** | `./scripts/run_organizer_demo.sh --mode default path/to/image.jpg` | 0.5 | Standard sigmoid-score cutoff for general demonstration. |
 
 #### Verified example
 
