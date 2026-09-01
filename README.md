@@ -2,6 +2,43 @@
 
 Reelistic is an end-to-end system for detecting AI-generated images after the kinds of transformations that happen on real platforms: JPEG recompression, blur, resizing, noise, color adjustment, and cropping. It combines a browser extension, a cloud-hosted inference API, a human-review dashboard, and a multi-scale DINOv3 forensic classifier.
 
+## Quick start: run the ONNX model
+
+The ONNX model is included through Git LFS. Clone the repository, then run the organiser script on any image:
+
+```bash
+git clone https://github.com/hippo2311/TikTokTechJam2026.git
+cd TikTokTechJam2026
+./scripts/run_organizer_demo.sh path/to/image.jpg
+```
+
+The script creates a local Python environment, installs the ONNX Runtime dependencies, retrieves the model with Git LFS if it is missing, and prints an `ai-generated` or `authentic` verdict.
+
+| Mode | Command | Threshold | Use case |
+|---|---|---:|---|
+| **Benchmark** (default) | `./scripts/run_organizer_demo.sh --mode benchmark path/to/image.jpg` | 0.9648 | Clean COCO/DALL·E 5%-FPR operating point; minimizes false positives. |
+| **Default** | `./scripts/run_organizer_demo.sh --mode default path/to/image.jpg` | 0.5 | Standard sigmoid-score cutoff for general demonstration. |
+
+#### Verified example
+
+With a local test image such as `data/test.png`, run from the project root:
+
+```bash
+./scripts/run_organizer_demo.sh data/test.png
+```
+
+Expected output:
+
+```text
+test.png: authentic (AI probability 0.7586; threshold 0.9648)
+```
+
+Install [Git LFS](https://git-lfs.com/) before cloning. If the clone was made without Git LFS, install it and rerun the script; it will retrieve the model automatically. To process a folder and save results:
+
+```bash
+./scripts/run_organizer_demo.sh path/to/images results.json
+```
+
 ## What the app does
 
 The browser extension lets a user drag over an image on a web page. It captures the visible tab, crops the selected region, validates the capture, and sends the image to the backend. The backend returns `ai-generated` or `human-made` with a confidence score.
